@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>考勤排班数据分析工作台</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg-deep: #080c14;
+  --bg-card: rgba(15,23,42,0.65);
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --cyan: #06b6d4;
+  --orange: #f97316;
+  --border-glow: rgba(59,130,246,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family: 'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  background: linear-gradient(180deg, var(--bg-deep) 0%, #0c1220 50%, #0a0f1a 100%);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 30%, rgba(59,130,246,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(139,92,246,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 45% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+  animation: bgShift 20s ease-in-out infinite alternate;
+}
+@keyframes bgShift{0%{opacity:0.85}100%{opacity:1}}
+</style>
+</head>
+<body>
+<!-- 上传面板 -->
+<div id="upload-panel" style="position:relative;z-index:10;max-width:900px;margin:0 auto;padding:40px 20px">
+  <div style="text-align:center;margin-bottom:40px">
+    <h1 style="font-size:2rem;font-weight:700;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent">
+      📊 考勤排班数据分析工作台
+    </h1>
+    <p style="color:var(--text-muted);margin-top:8px">上传 Excel 文件，一键完成数据清洗、指标计算与仪表盘展示</p>
+    <p style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <a href="attendance_pipeline.py" download style="color:var(--blue);font-size:0.85rem;text-decoration:none;background:rgba(59,130,246,0.1);padding:6px 16px;border-radius:8px;border:1px solid rgba(59,130,246,0.3)">⬇️ Python 脚本</a>
+      <a href="run.bat" download style="color:var(--green);font-size:0.85rem;text-decoration:none;background:rgba(34,197,94,0.1);padding:6px 16px;border-radius:8px;border:1px solid rgba(34,197,94,0.3)">🪟 Windows 启动器</a>
+      <a href="run.command" download style="color:var(--purple);font-size:0.85rem;text-decoration:none;background:rgba(139,92,246,0.1);padding:6px 16px;border-radius:8px;border:1px solid rgba(139,92,246,0.3)">🍎 macOS 启动器</a>
+      <a href="requirements.txt" download style="color:var(--text-muted);font-size:0.85rem;text-decoration:none;background:rgba(148,163,184,0.1);padding:6px 16px;border-radius:8px;border:1px solid rgba(148,163,184,0.3)">📋 requirements.txt</a>
+    </p>
+  </div>
+
+  <div id="file-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+  </div>
+
+  <div style="text-align:center;margin-top:30px">
+    <button id="btn-analyze" disabled
+      style="padding:14px 48px;font-size:1.1rem;font-weight:600;border:none;border-radius:12px;
+      background:linear-gradient(135deg,#1e293b,#334155);color:#64748b;cursor:not-allowed;
+      transition:all 0.3s">
+      📋 开始分析
+    </button>
+  </div>
+
+  <div id="progress-area" style="display:none;margin-top:20px;text-align:center">
+    <div style="color:var(--text-secondary);margin-bottom:8px" id="progress-text">正在处理...</div>
+    <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;max-width:400px;margin:0 auto">
+      <div id="progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:2px;transition:width 0.4s"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 仪表盘 (初始隐藏) -->
+<div id="dashboard" style="display:none;position:relative;z-index:10;padding:20px">
+  <div style="display:flex;gap:20px;min-height:100vh">
+    <aside id="sidebar" style="width:260px;flex-shrink:0"></aside>
+    <main id="main-content" style="flex:1;min-width:0"></main>
+  </div>
+</div>
+
+<!-- 穿透弹窗 -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px)">
+  <div id="modal-box" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    background:rgba(15,23,42,0.92);backdrop-filter:blur(24px);border-radius:18px;
+    max-width:1000px;max-height:84vh;width:90%;overflow-y:auto;padding:28px;
+    border:1px solid rgba(255,255,255,0.08)"></div>
+</div>
+
+<script>
+// ============================================================
+// SECTION 0: 全局状态
+// ============================================================
+const STATE = {
+  files: {},         // { key: { name, data: Array<Row> } }
+  reportData: null,  // 分析结果
+};
+
+const FILE_KEYS = [
+  { key:'raw',       label:'原始数据.xlsx',      desc:'考勤主数据（必填）', required:true },
+  { key:'leave',     label:'离职流程.xlsx',      desc:'离职审批数据', required:false },
+  { key:'roster',    label:'花名册.xlsx',        desc:'员工花名册', required:false },
+  { key:'shift',     label:'班次.xlsx',          desc:'班次字典', required:false },
+  { key:'resign',    label:'补签管理.xlsx',      desc:'补签记录', required:false },
+  { key:'sign_week', label:'美区签字报表 (2).xlsx', desc:'本周签字报表', required:false },
+  { key:'sign_last', label:'美区签字报表 (1).xlsx', desc:'上周签字报表', required:false },
+  { key:'sign_bi',   label:'美区签字报表.xlsx',   desc:'双周签字报表', required:false },
+];
+
+// ============================================================
+// SECTION 1: 文件上传 UI
+// ============================================================
+function buildUploadUI() {
+  const grid = document.getElementById('file-grid');
+  FILE_KEYS.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'file-card';
+    card.style.cssText = `
+      background:var(--bg-card);backdrop-filter:blur(20px);
+      border:1px dashed rgba(255,255,255,0.1);border-radius:12px;padding:18px;
+      cursor:pointer;transition:all 0.3s;text-align:center;
+    `;
+    card.innerHTML = `
+      <div style="font-size:1.6rem;margin-bottom:6px">${f.required ? '📁' : '📄'}</div>
+      <div style="font-weight:600;font-size:0.9rem;color:var(--text-primary)">${f.label}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${f.desc}</div>
+      <div class="file-status" style="font-size:0.75rem;margin-top:8px;color:var(--text-muted)">
+        ${f.required ? '待上传' : '可选'}
+      </div>
+    `;
+    card.addEventListener('dragover', e => { e.preventDefault(); card.style.borderColor='var(--blue)'; });
+    card.addEventListener('dragleave', () => { card.style.borderColor='rgba(255,255,255,0.1)'; });
+    card.addEventListener('drop', e => { e.preventDefault(); card.style.borderColor='rgba(255,255,255,0.1)'; handleFile(e.dataTransfer.files[0], f, card); });
+    card.addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type='file'; inp.accept='.xlsx,.xls';
+      inp.onchange = e => { if(e.target.files[0]) handleFile(e.target.files[0], f, card); };
+      inp.click();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function handleFile(file, fileDef, cardEl) {
+  if(!file.name.match(/\.xlsx?$/i)) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, {header:1});
+      if(data.length < 2) throw new Error('文件内容为空');
+      // 首行为列头
+      const headers = data[0].map(h => String(h||'').trim());
+      const rows = data.slice(1).map(r => {
+        const obj = {};
+        headers.forEach((h,i) => { obj[h] = r[i] !== undefined ? String(r[i]||'').trim() : ''; });
+        return obj;
+      });
+      STATE.files[fileDef.key] = { name: file.name, data: rows, headers };
+      cardEl.style.borderColor = 'var(--green)';
+      cardEl.querySelector('.file-status').textContent = `✅ ${rows.length} 行`;
+      cardEl.querySelector('.file-status').style.color = 'var(--green)';
+    } catch(err) {
+      cardEl.style.borderColor = 'var(--red)';
+      cardEl.querySelector('.file-status').textContent = '❌ 解析失败';
+      cardEl.querySelector('.file-status').style.color = 'var(--red)';
+      console.error('Excel解析错误:', err);
+    }
+    checkReady();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function checkReady() {
+  const hasRequired = FILE_KEYS.filter(f=>f.required).every(f=>STATE.files[f.key]);
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = !hasRequired;
+  if(hasRequired) {
+    btn.style.background = 'linear-gradient(135deg, var(--blue), var(--purple))';
+    btn.style.color = '#fff';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.style.background = 'linear-gradient(135deg,#1e293b,#334155)';
+    btn.style.color = '#64748b';
+    btn.style.cursor = 'not-allowed';
+  }
+}
+
+document.getElementById('btn-analyze').addEventListener('click', runAnalysis);
+
+buildUploadUI();
+
+// ============================================================
+// SECTION 2: 工具函数 (对应 Python utils.py)
+// ============================================================
+function toStr(v) {
+  if(v === null || v === undefined) return '';
+  const s = String(v).trim();
+  return ['nan','NaT','None','NaN','nat',''].includes(s) ? '' : s;
+}
+function toNum(v) {
+  const n = parseFloat(toStr(v));
+  return isNaN(n) ? 0 : n;
+}
+function parseHM(s) {
+  s = toStr(s);
+  if(!s) return null;
+  // 去掉日期前缀
+  if(s.includes(' ')) s = s.split(' ').pop();
+  s = s.replace(/^1900-01-01\s*/, '');
+  const parts = s.split(':');
+  if(parts.length < 2) return null;
+  const h = parseInt(parts[0]), m = parseInt(parts[1]);
+  if(isNaN(h)||isNaN(m)) return null;
+  return h*60 + m; // 返回分钟数
+}
+function absDiffMin(t1, t2) {
+  const a=parseHM(t1), b=parseHM(t2);
+  if(a===null||b===null) return null;
+  return Math.abs(a-b);
+}
+function totalHours(s) {
+  s = toStr(s);
+  if(!s) return 0;
+  // 尝试数值格式 (Excel天数)
+  const f = parseFloat(s);
+  if(!isNaN(f) && !s.includes(':')) return Math.round(f*24*100)/100;
+  // HH:MM 格式
+  const parts = s.split(':');
+  if(parts.length >= 2) return parseInt(parts[0]) + parseInt(parts[1])/60;
+  return 0;
+}
+function parseDate(s) {
+  s = toStr(s);
+  if(!s) return null;
+  // 尝试多种格式
+  const fmts = [
+    /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/,  // 2026-05-28
+    /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/,  // 05/28/2026
+  ];
+  for(const re of fmts) {
+    const m = s.match(re);
+    if(m) {
+      const y=parseInt(m[1]), mo=parseInt(m[2])-1, d=parseInt(m[3]);
+      if(y>2000&&mo<12&&d<32) return new Date(y,mo,d);
+      // 尝试 mm/dd/yyyy
+      if(mo<12&&d>2000) return new Date(d,mo-1,y);
+    }
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+function parseWorkPeriod(s) {
+  s = toStr(s);
+  if(!s) return null;
+  const m = s.match(/(?:居家办公|公出|出差|病假|年假|无薪病假).*?(\d{1,2}:\d{2})-.*?(\d{1,2}:\d{2})/);
+  if(!m) return null;
+  return { start: parseHM(m[1]), end: parseHM(m[2]) };
+}
+function safeDiv(a,b) { return b ? a/b : 0; }
+function pctStr(v) { return Math.round(v*1000)/10 + '%'; }
+function dateEq(d1,d2) {
+  if(!d1||!d2) return false;
+  return d1.getFullYear()===d2.getFullYear() && d1.getMonth()===d2.getMonth() && d1.getDate()===d2.getDate();
+}
+
+// ============================================================
+// SECTION 3: 数据处理管道
+// ============================================================
+const GL00_WHITELIST = new Set(['GL000434','GL001344','GL000004','GL000440','GL000446','GL000902','GL001183']);
+const GL00_EXTRA_REMOVE = new Set(['GL502563']);
+
+function setProgress(text, pct) {
+  document.getElementById('progress-text').textContent = text;
+  document.getElementById('progress-bar').style.width = pct+'%';
+}
+
+function runAnalysis() {
+  document.getElementById('progress-area').style.display = 'block';
+  try {
+    // Step 1: 数据清洗
+    setProgress('正在清洗数据 (1/5)...', 10);
+    const cleaned = cleanData();
+    setProgress('清洗完成: '+cleaned.length+' 行', 25);
+
+    // Step 2: 指标计算
+    setProgress('正在计算指标 (2/5)...', 30);
+    const metrics = computeMetrics(cleaned);
+    setProgress('指标计算完成', 50);
+
+    // Step 3: 报告构建
+    setProgress('正在构建报告 (3/5)...', 55);
+    STATE.reportData = buildReport(metrics);
+    setProgress('报告构建完成', 75);
+
+    // Step 4: 渲染仪表盘
+    setProgress('正在渲染仪表盘 (4/5)...', 80);
+    document.getElementById('upload-panel').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    renderDashboard();
+    setProgress('完成!', 100);
+
+    setTimeout(() => { document.getElementById('progress-area').style.display = 'none'; }, 1500);
+  } catch(e) {
+    setProgress('错误: '+e.message, 100);
+    console.error(e);
+  }
+}
+
+// ---- 数据清洗 (对应 clean_data.py) ----
+function cleanData() {
+  const raw = STATE.files.raw.data;
+  let rows = [...raw];
+
+  // 跳过重复列头行
+  if(toStr(rows[0]?.['考勤日期']) === '考勤日期') rows = rows.slice(1);
+
+  // 识别标准日期
+  const dates = [...new Set(rows.map(r=>parseDate(r['考勤日期'])).filter(Boolean))].sort((a,b)=>a-b);
+  const standardDate = dates[dates.length-1];
+  if(!standardDate) throw new Error('无法识别考勤日期');
+
+  // Step 1: 剔除离职人员
+  if(STATE.files.leave) {
+    const leaveRows = STATE.files.leave.data;
+    const hasStatus = leaveRows.some(r=>toStr(r['审批状态']));
+    const leaveIds = new Set();
+    leaveRows.forEach(r => {
+      const lwd = parseDate(r['最后工作日']);
+      if(!lwd || lwd >= standardDate) return;
+      if(hasStatus) {
+        const st = toStr(r['审批状态']);
+        if(st.includes('审批中')||st.includes('已完成')||st.includes('转交')) leaveIds.add(toStr(r['工号']));
+      } else {
+        leaveIds.add(toStr(r['工号']));
+      }
+    });
+    rows = rows.filter(r => !leaveIds.has(toStr(r['工号'])));
+  }
+
+  // Step 2: 剔除未入职
+  if(STATE.files.roster) {
+    const rosterRows = STATE.files.roster.data;
+    const notJoinedIds = new Set();
+    rosterRows.forEach(r => {
+      const jd = parseDate(r['入职日期']);
+      if(jd && jd > standardDate) notJoinedIds.add(toStr(r['工号']));
+    });
+    rows = rows.filter(r => !notJoinedIds.has(toStr(r['工号'])));
+  }
+
+  // Step 3: GL00 处理
+  rows = rows.filter(r => !GL00_EXTRA_REMOVE.has(toStr(r['工号'])));
+  rows = rows.filter(r => {
+    const eid = toStr(r['工号']);
+    if(!eid.startsWith('GL00')) return true;
+    return GL00_WHITELIST.has(eid);
+  });
+
+  // Step 4: 剔除 EU人力资源部
+  rows = rows.filter(r => toStr(r['三级部门']) !== 'EU人力资源部');
+
+  // Step 5: 补签数匹配
+  const resignCounts = {};
+  if(STATE.files.resign) {
+    const resignRows = STATE.files.resign.data;
+    resignRows.forEach(r => {
+      const st = toStr(r['审批状态']);
+      if(!['已完成','审批中','转交'].includes(st)) return;
+      const rd = parseDate(r['补签日期']);
+      if(!rd || !dateEq(rd,standardDate)) return;
+      const eid = toStr(r['工号']);
+      resignCounts[eid] = (resignCounts[eid]||0) + 1;
+    });
+  }
+  rows.forEach(r => { r['补签数'] = resignCounts[toStr(r['工号'])] || 0; });
+
+  // Step 6: 签字报表累计工时 (本周/上周/双周)
+  const signAcc = (key, subtract40) => {
+    if(!STATE.files[key]) return {};
+    const acc = {};
+    STATE.files[key].data.forEach(r => {
+      const eid = toStr(r['工号']);
+      // 找工时列
+      const hours = Object.values(r).reduce((sum,v)=>sum+totalHours(v),0);
+      acc[eid] = (acc[eid]||0) + hours;
+    });
+    if(subtract40) {
+      for(const k in acc) acc[k] = Math.max(0, acc[k]-40);
+    }
+    return acc;
+  };
+  const thisWeek = signAcc('sign_week', true);
+  const lastWeek = signAcc('sign_last', true);
+  const biweek = signAcc('sign_bi', false);
+  rows.forEach(r => {
+    const eid = toStr(r['工号']);
+    r['本周累计加班工时'] = thisWeek[eid]||0;
+    r['上周累计加班工时'] = lastWeek[eid]||0;
+    r['双周累计工时'] = biweek[eid]||0;
+  });
+
+  return rows;
+}
+
+// ---- 指标计算 (对应 add_metrics.py) ----
+function computeMetrics(rows) {
+  // 构建班次字典
+  const shiftDict = {};
+  if(STATE.files.shift) {
+    STATE.files.shift.data.forEach(r => {
+      const name = toStr(r['班次名称']);
+      if(name) shiftDict[name] = {
+        restStart: toStr(r['休息开始时间']),
+        restEnd: toStr(r['休息结束时间'])
+      };
+    });
+  }
+
+  return rows.map(row => {
+    const shiftName = toStr(row['班次名称']);
+    const note = toStr(row['备注（GF）']);
+    const shift = shiftDict[shiftName] || {};
+
+    // 规则0: 休息时间
+    row['休息开始时间'] = shift.restStart || '';
+    row['休息结束时间'] = shift.restEnd || '';
+
+    // 规则1: HUB
+    row['HUB'] = getHub(row);
+
+    // 规则2: 是否排班正确
+    row['是否排班正确'] = getCorrect(row, shiftName);
+
+    // 规则3: 每日总工时
+    row['每日总工时计算'] = getDailyTotal(row);
+
+    // 规则4: 是否日超8H
+    row['是否日超8H'] = getOver8h(row);
+
+    // 规则5
+    row['是否排班'] = shiftName ? '是' : '否';
+    row['标准打卡数'] = getStandardCount(row, row['是否排班正确'], shiftName, note);
+    row['缺卡数'] = Math.max(0, row['标准打卡数'] - toNum(row['班次内打卡次数']));
+
+    return row;
+  });
+}
+
+// ---- 规则1: HUB标记 ----
+function getHub(row) {
+  const d4=toStr(row['四级部门']), d5=toStr(row['五级部门']);
+  if(d5.includes('.H')||d4.includes('.H')||d5==='EWR.G'||d5==='CNO.G') return 'hub';
+  return '';
+}
+
+// ---- 规则2: 是否排班正确 (7级优先级) ----
+function getCorrect(row, shiftName) {
+  const first=toStr(row['首打卡时间']), last=toStr(row['末打卡时间']);
+  const startT=toStr(row['班次上班时间']), endT=toStr(row['班次下班时间']);
+
+  // P1: 班次名称为空 → /
+  if(!shiftName) return '/';
+
+  const isRest = shiftName.includes('TY_休息日') || shiftName.includes('TY_美国节假日');
+
+  // P2: 休息日/节假日 + 首末均为空 → 正确
+  if(isRest && !first && !last) return '正确';
+
+  // P3: 非休息日 + 首打卡为空
+  if(!isRest && !first) {
+    const diff = absDiffMin(last, endT);
+    return (diff!==null && diff<=60) ? '正确' : '不正确';
+  }
+
+  // P4: 末打卡为空
+  if(!last) {
+    const diff = absDiffMin(first, startT);
+    return (diff!==null && diff<=60) ? '正确' : '不正确';
+  }
+
+  // P5: 休息日 + 单边打卡
+  if(isRest) {
+    if((!first&&last)||(first&&!last)) return '不正确';
+  }
+
+  // P6: 非休息日 + 首末均有
+  if(!isRest && first && last) {
+    const diff = absDiffMin(first, startT);
+    return (diff!==null && diff<=60) ? '正确' : '不正确';
+  }
+
+  // P7: 兜底
+  return '不正确';
+}
+
+// ---- 规则3: 每日总工时 ----
+function getDailyTotal(row) {
+  let baseH = 0;
+  for(const col of ['每日总工时(公式：末打卡-首打卡-班次午休时间+居家办公时长)合计',
+                     '每日总工时(公式：末打卡时间-首打卡时间-班次午休时间+居家办公时长)合计',
+                     '每日总工时(公式：末打卡时间-首打卡时间-班次午休时间+居家办公时长)']) {
+    if(row[col] !== undefined) { baseH = totalHours(row[col]); break; }
+  }
+  const homeOffice = totalHours(row['居家办公合计（审批中）']);
+  return Math.round((baseH+homeOffice)*100)/100;
+}
+
+// ---- 规则4: 是否日超8H ----
+function getOver8h(row) {
+  return toNum(row['日超8H']) !== 0 ? '是' : '否';
+}
+
+// ---- 规则5: 标准打卡数 ----
+function getStandardCount(row, isCorrect, shiftName, note) {
+  const isScheduled = !!shiftName;
+  const isRest = shiftName.includes('TY_休息日') || shiftName.includes('TY_美国节假日');
+  const isNoteEmpty = !note;
+
+  // 1: 未排班 → 4
+  if(!isScheduled) return 4;
+  // 2: 休息日 → 0
+  if(isRest) return 0;
+  // 3: 备注为空 → 4
+  if(isNoteEmpty) return 4;
+
+  const period = parseWorkPeriod(note);
+  if(!period || period.start===null || period.end===null) return 4;
+
+  const shiftStart = parseHM(row['班次上班时间']);
+  const shiftEnd = parseHM(row['班次下班时间']);
+  const restStart = parseHM(row['休息开始时间']);
+  const restEnd = parseHM(row['休息结束时间']);
+
+  if(shiftStart===null || shiftEnd===null) return 4;
+
+  const periodHours = (period.end - period.start) / 60;
+
+  // 优先: 时间段与班次完全吻合
+  if(period.start===shiftStart && period.end===shiftEnd) return 0;
+
+  if(isCorrect === '正确') {
+    if(restStart!==null && restEnd!==null) {
+      // 完全在休息区间内 → 0
+      if(period.start>=restStart && period.end<=restEnd) return 0;
+      // 与休息交叉(只交叉不包含) → 3
+      if(period.start<restEnd && period.end>restStart &&
+         !(period.start<=restStart && period.end>=restEnd) &&
+         period.start>=shiftStart && period.end<=shiftEnd) return 3;
+      // 完全包含休息区间 → 2
+      if(period.start<=restStart && period.end>=restEnd &&
+         period.start>=shiftStart && period.end<=shiftEnd) return 2;
+      return 4;
+    }
+    return 4;
+  } else {
+    // 不正确分支
+    if(periodHours >= 7) return 0;
+    if(periodHours >= 4) return 2;
+    return 4;
+  }
+}
+
+// ============================================================
+// SECTION 4: 报告数据构建 (对应 build_report_data.py)
+// ============================================================
+function buildEmployeeRow(r) {
+  return {
+    '工号':toStr(r['工号']), '姓名':toStr(r['姓名']),
+    '三级部门':toStr(r['三级部门']), '四级部门':toStr(r['四级部门']),
+    '五级部门':toStr(r['五级部门']), '班次名称':toStr(r['班次名称']),
+    '班次上班时间':toStr(r['班次上班时间']), '班次下班时间':toStr(r['班次下班时间']),
+    '首打卡时间':toStr(r['首打卡时间']), '末打卡时间':toStr(r['末打卡时间'])
+  };
+}
+
+function dedupe(rows) {
+  const seen = new Set();
+  return rows.filter(r => {
+    const eid=toStr(r['工号']);
+    if(seen.has(eid)) return false;
+    seen.add(eid); return true;
+  });
+}
+
+function summarize(groupRows) {
+  const unique = dedupe(groupRows);
+  const total = unique.length;
+  if(total===0) {
+    return {
+      total:0, all_employees:[],
+      '日超8H':{count:0,total_hours:0,rate:'0%',employees:[]},
+      '排班':{已排班:0,未排班:0,排班率:'0%',employees_未排班:[]},
+      '排班正确':{正确:0,不正确:0,不参与:0,正确率:'0%',employees_不正确:[]},
+      '打卡率':{打卡率:'0%',打卡数:0,标准打卡数:0,缺卡数:0,补签数_emp:0,缺卡数_emp:0,补签率:'0%',班次内打卡次数:0,employees:[]},
+      'HUB':{total:0,正确:0,不正确:0,正确率:'0%',employees_不正确:[]}
+    };
+  }
+
+  // 日超8H
+  const over8hEmps = unique.filter(r=>r['是否日超8H']==='是');
+  const over8hCount = over8hEmps.length;
+  const over8hTotalHours = unique.reduce((s,r)=>s+toNum(r['日超8H']),0);
+  const over8hList = over8hEmps.map(r=>({...buildEmployeeRow(r), '超8H小时':toNum(r['日超8H'])}));
+
+  // 排班
+  const scheduled = unique.filter(r=>r['是否排班']==='是').length;
+  const unscheduled = total - scheduled;
+  const scheduleRate = safeDiv(scheduled,total);
+  const unscheduledList = unique.filter(r=>r['是否排班']==='否').map(r=>({...buildEmployeeRow(r),'是否排班':'否'}));
+
+  // 排班正确
+  const correct = unique.filter(r=>r['是否排班正确']==='正确').length;
+  const incorrectCount = unique.filter(r=>r['是否排班正确']==='不正确').length;
+  const notPart = unique.filter(r=>r['是否排班正确']==='/').length;
+  const correctRate = safeDiv(correct, correct+incorrectCount);
+  const incorrectList = unique.filter(r=>r['是否排班正确']==='不正确').map(r=>({...buildEmployeeRow(r),'是否排班正确':'不正确'}));
+
+  // 打卡率
+  const punchSum = unique.reduce((s,r)=>s+toNum(r['班次内打卡次数']),0);
+  const stdTotal = unique.reduce((s,r)=>s+toNum(r['标准打卡数']),0);
+  const missSum = unique.reduce((s,r)=>s+toNum(r['缺卡数']),0);
+  const punchRate = safeDiv(punchSum,stdTotal);
+
+  // 补签率：按唯一工号聚合
+  const empAgg = {};
+  unique.forEach(r => { empAgg[toStr(r['工号'])] = { bq:toNum(r['补签数']), qk:toNum(r['缺卡数']) }; });
+  const bqSum = Object.values(empAgg).reduce((s,v)=>s+v.bq,0);
+  const qkSum = Object.values(empAgg).reduce((s,v)=>s+v.qk,0);
+  const buqianRate = safeDiv(bqSum, bqSum+qkSum);
+
+  const missEmps = unique.filter(r=>toNum(r['缺卡数'])>0).map(r=>({
+    ...buildEmployeeRow(r),
+    '缺卡数':toNum(r['缺卡数']), '班次内打卡次数':toNum(r['班次内打卡次数']), '标准打卡数':toNum(r['标准打卡数'])
+  }));
+
+  // HUB
+  const hubEmps = unique.filter(r=>r['HUB']==='hub');
+  const hubTotal = hubEmps.length;
+  const hubCorrect = hubEmps.filter(r=>r['是否排班正确']==='正确').length;
+  const hubIncorrect = hubEmps.filter(r=>r['是否排班正确']==='不正确').length;
+  const hubRate = safeDiv(hubCorrect, hubCorrect+hubIncorrect);
+  const hubIncorrectList = hubEmps.filter(r=>r['是否排班正确']==='不正确').map(r=>({...buildEmployeeRow(r),'是否排班正确':'不正确'}));
+
+  return {
+    total,
+    all_employees: unique.map(r=>buildEmployeeRow(r)),
+    '日超8H':{count:over8hCount,total_hours:Math.round(over8hTotalHours*100)/100,rate:pctStr(safeDiv(over8hCount,total)),employees:over8hList},
+    '排班':{已排班:scheduled,未排班:unscheduled,排班率:pctStr(scheduleRate),employees_未排班:unscheduledList},
+    '排班正确':{正确:correct,不正确:incorrectCount,不参与:notPart,正确率:pctStr(correctRate),employees_不正确:incorrectList},
+    '打卡率':{打卡率:pctStr(punchRate),打卡数:Math.round(punchSum*10)/10,标准打卡数:Math.round(stdTotal*10)/10,缺卡数:Math.round(missSum*10)/10,补签数_emp:Math.round(bqSum*10)/10,缺卡数_emp:Math.round(qkSum*10)/10,补签率:pctStr(buqianRate),班次内打卡次数:Math.round(punchSum*10)/10,employees:missEmps},
+    'HUB':{total:hubTotal,正确:hubCorrect,不正确:hubIncorrect,正确率:pctStr(hubRate),employees_不正确:hubIncorrectList}
+  };
+}
+
+function buildReport(metrics) {
+  const overview = summarize(metrics);
+  const dates = [...new Set(metrics.map(r=>toStr(r['考勤日期'])).filter(Boolean))].sort();
+  const dateRange = dates.length>1 ? dates[0]+' ~ '+dates[dates.length-1] : dates[0]||'';
+
+  // 三级部门分组
+  const dept3Map = {};
+  metrics.forEach(r => {
+    const d3 = toStr(r['三级部门']);
+    if(!d3) return;
+    if(!dept3Map[d3]) dept3Map[d3] = [];
+    dept3Map[d3].push(r);
+  });
+
+  const departments = Object.entries(dept3Map).map(([name,rows]) => {
+    const d3Summary = summarize(rows);
+    // 四级部门
+    const subDepts = [];
+    const d4Map = {};
+    rows.filter(r=>toStr(r['四级部门'])).forEach(r => {
+      const d4 = toStr(r['四级部门']);
+      if(!d4Map[d4]) d4Map[d4]=[];
+      d4Map[d4].push(r);
+    });
+    const emptyRows = rows.filter(r=>!toStr(r['四级部门']));
+    Object.entries(d4Map).forEach(([d4Name,d4Rows]) => {
+      subDepts.push({name:d4Name,summary:summarize(d4Rows)});
+    });
+    if(emptyRows.length) subDepts.push({name:'/',summary:summarize(emptyRows)});
+    subDepts.sort((a,b)=>b.summary.total-a.summary.total);
+
+    return {name,summary:d3Summary,sub_depts:subDepts};
+  });
+  departments.sort((a,b)=>b.summary.total-a.summary.total);
+
+  return {
+    meta:{total_employees:overview.total,date_range:dateRange,department_count:departments.length},
+    overview, departments
+  };
+}
+
+// ============================================================
+// SECTION 5: 仪表盘 UI 渲染
+// ============================================================
+let chartInstances = {}; // { main, mainLine, sub, subLine, dept, deptLine }
+let currentView = 'overview'; // 'overview' | 'dept-{name}'
+
+function getStatusColor(metric, value) {
+  const v = parseFloat(value);
+  if(isNaN(v)) return '';
+  // 排班率
+  if(metric==='schedule') return v>=100 ? 'green' : v>=90 ? 'yellow' : 'red';
+  // 正确率/HUB/打卡率
+  return v>=90 ? 'green' : v>=50 ? 'yellow' : 'red';
+}
+
+function statusClass(metric, val) {
+  const c = getStatusColor(metric, val);
+  return c ? 'status-'+c : '';
+}
+
+function getStatusCSS(metric, val) {
+  const c = getStatusColor(metric, val);
+  if(!c) return '';
+  const colors = {green:'var(--green)',yellow:'var(--yellow)',red:'var(--red)'};
+  return 'border-left:3px solid '+colors[c];
+}
+
+function renderDashboard() {
+  renderSidebar();
+  showOverview();
+}
+
+// ---- 侧边栏 ----
+function renderSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const RD = STATE.reportData;
+  let html = `
+    <div style="padding:20px;border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem">📊</div>
+        <span style="font-weight:700;font-size:1rem">考勤分析</span>
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">${RD.meta.date_range}</div>
+    </div>
+    <nav style="padding:12px 0">
+      <div class="nav-item active" data-view="overview" onclick="showOverview()"
+        style="padding:10px 20px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text-primary);background:rgba(59,130,246,0.12);border-left:3px solid var(--blue)">
+        <span>🏠</span> 全览
+        <span style="margin-left:auto;font-size:0.75rem;color:var(--text-muted)">${RD.meta.total_employees}人</span>
+      </div>
+  `;
+  RD.departments.forEach(d => {
+    const d3Val = parseFloat(d.summary['排班'].排班率);
+    const d3Dot = d3Val>=100 ? 'green' : d3Val>=90 ? 'yellow' : 'red';
+    html += `
+      <div class="nav-dept" style="cursor:pointer" onclick="toggleDept(this)">
+        <div style="padding:10px 20px;display:flex;align-items:center;gap:8px;color:var(--text-secondary)">
+          <span style="font-size:0.7rem">▶</span>
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--${d3Dot});flex-shrink:0"></span>
+          <span>${d.name}</span>
+          <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted)">${d.summary.total}</span>
+        </div>
+        <div class="nav-sub" style="display:none;padding-left:28px">
+    `;
+    d.sub_depts.forEach(sd => {
+      const rate = parseFloat(sd.summary['排班'].排班率)||0;
+      const cr = parseFloat(sd.summary['排班正确'].正确率)||0;
+      const dot = rate<90||cr<50 ? 'red' : rate<100||cr<90 ? 'yellow' : 'green';
+      html += `
+        <div class="nav-item" data-view="dept-${d.name}-${sd.name}" onclick="event.stopPropagation();showDeptView('${d.name}','${sd.name}')"
+          style="padding:7px 16px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-muted);border-radius:6px;margin:2px 0">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--${dot});flex-shrink:0"></span>
+          <span>${sd.name}</span>
+          <span style="margin-left:auto;font-size:0.65rem">${sd.summary.total}</span>
+        </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</nav>`;
+  sidebar.innerHTML = html;
+}
+
+function toggleDept(el) {
+  const sub = el.querySelector('.nav-sub');
+  sub.style.display = sub.style.display==='none' ? 'block' : 'none';
+  const arrow = el.querySelector('span');
+  arrow.textContent = sub.style.display==='none' ? '▶' : '▼';
+}
+
+function showOverview() {
+  currentView = 'overview';
+  updateNavActive('overview');
+  const main = document.getElementById('main-content');
+  const o = STATE.reportData.overview;
+  const D = STATE.reportData.departments;
+
+  let html = `<h2 style="font-size:1.3rem;margin-bottom:16px;color:var(--text-primary)">📊 全览仪表盘</h2>`;
+  html += renderKPICards(o);
+  html += `<h3 style="margin:24px 0 12px;color:var(--text-secondary)">部门总览</h3>`;
+  html += renderDeptTable(D);
+  main.innerHTML = html;
+
+  setTimeout(() => {
+    drawOverviewChart(D);
+  }, 100);
+}
+
+function showDeptView(d3Name, d4Name) {
+  currentView = 'dept-'+d3Name+'-'+d4Name;
+  updateNavActive(currentView);
+  const main = document.getElementById('main-content');
+  const RD = STATE.reportData;
+  const dept = RD.departments.find(d=>d.name===d3Name);
+  if(!dept) return;
+  const sub = dept.sub_depts.find(s=>s.name===d4Name);
+  if(!sub) return;
+
+  let html = `<h2 style="font-size:1.3rem;margin-bottom:8px;color:var(--text-primary)">
+    ${d3Name} / ${d4Name}
+    <span style="font-size:0.85rem;color:var(--text-muted)">${sub.summary.total}人</span>
+  </h2>`;
+  html += renderKPICards(sub.summary);
+  // 四级完整指标表
+  html += `<h3 style="margin:24px 0 12px;color:var(--text-secondary)">指标明细</h3>`;
+  html += renderSubDeptDetail(sub.summary);
+  main.innerHTML = html;
+
+  setTimeout(() => {
+    drawSubDeptChart(sub.summary);
+  }, 100);
+}
+
+function updateNavActive(view) {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.remove('active');
+    el.style.background = 'transparent';
+    el.style.borderLeft = '3px solid transparent';
+    el.style.color = 'var(--text-muted)';
+  });
+  const active = document.querySelector(`.nav-item[data-view="${view}"]`);
+  if(active) {
+    active.classList.add('active');
+    active.style.background = 'rgba(59,130,246,0.12)';
+    active.style.borderLeft = '3px solid var(--blue)';
+    active.style.color = 'var(--text-primary)';
+  }
+}
+
+// ---- KPI 卡片 ----
+function renderKPICards(summary) {
+  const cards = [
+    {label:'👥 总人数', value:summary.total, desc:'', status:'', drill:null},
+    {label:'⏰ 日超8H合计', value:summary['日超8H'].total_hours+'h', desc:summary['日超8H'].rate, status:getStatusColor('schedule',parseFloat(summary['日超8H'].rate)), drill:'over8h'},
+    {label:'📋 排班率', value:summary['排班'].排班率, desc:`${summary['排班'].已排班}/${summary.total}`, status:getStatusColor('schedule',parseFloat(summary['排班'].排班率)), drill:'unscheduled'},
+    {label:'✅ 排班正确率', value:summary['排班正确'].正确率, desc:`${summary['排班正确'].正确}/${summary['排班正确'].正确+summary['排班正确'].不正确}`, status:getStatusColor('correct',parseFloat(summary['排班正确'].正确率)), drill:'incorrect'},
+    {label:'✅ 打卡率', value:summary['打卡率'].打卡率, desc:`打卡${summary['打卡率'].打卡数}/缺卡${summary['打卡率'].缺卡数}`, status:getStatusColor('correct',parseFloat(summary['打卡率'].打卡率)), drill:'miss'},
+    {label:'📊 打卡数', value:summary['打卡率'].打卡数, desc:`补签率 ${summary['打卡率'].补签率}`, status:'', drill:'miss'},
+    {label:'🔷 HUB正确率', value:summary['HUB'].正确率, desc:`${summary['HUB'].正确}/${summary['HUB'].total}`, status:getStatusColor('correct',parseFloat(summary['HUB'].正确率)), drill:'hubIncorrect'},
+  ];
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">';
+  cards.forEach(c => {
+    const st = c.status ? `border-left:3px solid var(--${c.status})` : '';
+    html += `<div style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:16px;${st};border-top:1px solid var(--border-glow)">
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px">${c.label}</div>
+      <div style="font-size:1.4rem;font-weight:700">${c.value}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">${c.desc}</div>`;
+    if(c.drill) html += `<div style="margin-top:6px"><a href="javascript:void(0)" onclick="drillFromOverview('${c.drill}')" style="color:var(--blue);font-size:0.75rem;text-decoration:none">查看明细 →</a></div>`;
+    html += `</div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+// ---- 部门表格 ----
+function renderDeptTable(departments) {
+  let html = `<div style="overflow-x:auto;background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;border:1px solid rgba(255,255,255,0.06)">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      <thead><tr style="background:rgba(30,41,59,0.5)">
+        <th style="padding:10px 12px;text-align:left;color:var(--text-secondary)">部门</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">人数</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">日超8H</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">排班率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">正确率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">未排班</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">打卡率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">打卡数</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">补签率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">HUB</th>
+      </tr></thead><tbody>`;
+
+  departments.forEach(d => {
+    const s = d.summary;
+    const rowStyle = 'border-bottom:1px solid rgba(255,255,255,0.04)';
+    html += `<tr style="${rowStyle}">
+      <td style="padding:10px 12px;color:var(--text-primary);cursor:pointer" onclick="showDeptSummary('${d.name}')">${d.name}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)"><a href="javascript:void(0)" onclick="showDrilldown('${d.name}-全员', '${d.name} 全员明细', ${JSON.stringify(s.all_employees).replace(/"/g,'&quot;')})" style="color:var(--blue);text-decoration:none">${s.total}</a></td>
+      <td style="padding:10px 12px;text-align:center"><a href="javascript:void(0)" onclick="showDrilldownJSON('drill-${d.name}-over8h','${d.name} 日超8H明细',${JSON.stringify(s['日超8H'].employees)})" style="color:var(--blue);text-decoration:none${parseFloat(s['日超8H'].rate)>0?'':'opacity:0'}" >${s['日超8H'].total_hours}h</a></td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('schedule',parseFloat(s['排班'].排班率))==='green'?'var(--green)':getStatusColor('schedule',parseFloat(s['排班'].排班率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['排班'].排班率}</td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('correct',parseFloat(s['排班正确'].正确率))==='green'?'var(--green)':getStatusColor('correct',parseFloat(s['排班正确'].正确率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['排班正确'].正确率}</td>
+      <td style="padding:10px 12px;text-align:center"><a href="javascript:void(0)" onclick="showDrilldownJSON('drill-${d.name}-unscheduled','${d.name} 未排班明细',${JSON.stringify(s['排班'].employees_未排班)})" style="color:var(--blue);text-decoration:none">▶</a></td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('correct',parseFloat(s['打卡率'].打卡率))==='green'?'var(--green)':getStatusColor('correct',parseFloat(s['打卡率'].打卡率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['打卡率'].打卡率}</td>
+      <td style="padding:10px 12px;text-align:center"><a href="javascript:void(0)" onclick="showDrilldownJSON('drill-${d.name}-miss','${d.name} 缺卡明细',${JSON.stringify(s['打卡率'].employees)})" style="color:var(--blue);text-decoration:none">${s['打卡率'].打卡数}</a></td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['打卡率'].补签率}</td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('correct',parseFloat(s['HUB'].正确率))==='green'?'var(--green)':getStatusColor('correct',parseFloat(s['HUB'].正确率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['HUB'].正确率}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>
+    <div style="margin-top:20px"><div id="chart-container" style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06)"><canvas id="mainChart" height="200"></canvas></div></div>
+    <div style="margin-top:14px"><div style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06)"><canvas id="mainLineChart" height="200"></canvas></div></div>`;
+  return html;
+}
+
+// ---- 四级指标明细表 ----
+function renderSubDeptDetail(summary) {
+  const s = summary;
+  return `<div style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06)">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <div><div style="color:var(--text-muted);font-size:0.8rem">日超8H合计</div><div style="font-size:1.1rem;font-weight:600">${s['日超8H'].total_hours}h</div></div>
+      <div><div style="color:var(--text-muted);font-size:0.8rem">排班率</div><div style="font-size:1.1rem;font-weight:600">${s['排班'].排班率}</div></div>
+      <div><div style="color:var(--text-muted);font-size:0.8rem">正确率</div><div style="font-size:1.1rem;font-weight:600">${s['排班正确'].正确率}</div></div>
+      <div><div style="color:var(--text-muted);font-size:0.8rem">打卡率</div><div style="font-size:1.1rem;font-weight:600">${s['打卡率'].打卡率}</div></div>
+      <div><div style="color:var(--text-muted);font-size:0.8rem">补签率</div><div style="font-size:1.1rem;font-weight:600">${s['打卡率'].补签率}</div></div>
+      <div><div style="color:var(--text-muted);font-size:0.8rem">HUB正确率</div><div style="font-size:1.1rem;font-weight:600">${s['HUB'].正确率}</div></div>
+    </div>
+    <div style="margin-top:20px"><canvas id="subDeptChart" height="150"></canvas></div>
+    <div style="margin-top:14px"><canvas id="subDeptLineChart" height="150"></canvas></div>
+  </div>`;
+}
+
+// ---- 穿透弹窗 ----
+function showDrilldownJSON(id, title, data) {
+  showDrilldown(id, title, data);
+}
+
+function showDrilldown(id, title, employees) {
+  const data = typeof employees === 'string' ? JSON.parse(employees) : employees;
+  if(!data||!data.length) return;
+  const cols = Object.keys(data[0]);
+  const order = ['工号','姓名','三级部门','四级部门','五级部门','班次名称','班次上班时间','班次下班时间','首打卡时间','末打卡时间','超8H小时','缺卡数','班次内打卡次数','标准打卡数','是否排班正确','是否排班'];
+  const sortedCols = [...new Set([...order.filter(c=>cols.includes(c)), ...cols.filter(c=>!order.includes(c))])];
+
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3 style="color:var(--text-primary);font-size:1rem">${title} (${data.length}人)</h3>
+    <button onclick="closeModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer">&times;</button>
+  </div>`;
+  html += `<div style="overflow-x:auto;max-height:60vh"><table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+    <thead><tr style="background:rgba(30,41,59,0.5);position:sticky;top:0">`;
+  sortedCols.forEach(c => { html += `<th style="padding:8px 10px;text-align:left;color:var(--text-secondary);white-space:nowrap">${c}</th>`; });
+  html += `</tr></thead><tbody>`;
+  data.forEach(r => {
+    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">`;
+    sortedCols.forEach(c => { html += `<td style="padding:8px 10px;color:var(--text-secondary);white-space:nowrap">${r[c]||''}</td>`; });
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-box').innerHTML = html;
+  overlay.style.display = 'block';
+  overlay.onclick = function(e) { if(e.target===overlay) closeModal(); };
+  document.addEventListener('keydown', function esc(e) { if(e.key==='Escape') { closeModal(); document.removeEventListener('keydown',esc); } });
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+// ---- 穿透入口 ----
+function drillFromOverview(type) {
+  const s = STATE.reportData.overview;
+  const map = {
+    over8h: {title:'全公司 日超8H明细', data:s['日超8H'].employees},
+    unscheduled: {title:'全公司 未排班明细', data:s['排班'].employees_未排班},
+    incorrect: {title:'全公司 排班不正确明细', data:s['排班正确'].employees_不正确},
+    miss: {title:'全公司 缺卡明细', data:s['打卡率'].employees},
+    hubIncorrect: {title:'全公司 HUB排班不正确明细', data:s['HUB'].employees_不正确},
+  };
+  const d = map[type];
+  if(d) showDrilldown(type, d.title, d.data);
+}
+
+// ---- 柱状图 + 折线图 ----
+const CHART_COLORS = {schedule:'#22c55e',correct:'#3b82f6',hub:'#8b5cf6',punch:'#f97316'};
+
+function drawOverviewChart(departments) {
+  if(chartInstances.main) chartInstances.main.destroy();
+  const top12 = departments.slice(0,12);
+  const labels = top12.map(d=>d.name.length>6?d.name.slice(0,6)+'…':d.name);
+  const ctx = document.getElementById('mainChart');
+  if(!ctx) return;
+  chartInstances.main = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'排班率',data:top12.map(d=>parseFloat(d.summary['排班'].排班率)),backgroundColor:CHART_COLORS.schedule,borderRadius:4,borderWidth:1,borderColor:CHART_COLORS.schedule},
+        {label:'正确率',data:top12.map(d=>parseFloat(d.summary['排班正确'].正确率)),backgroundColor:CHART_COLORS.correct,borderRadius:4,borderWidth:1,borderColor:CHART_COLORS.correct},
+        {label:'HUB正确率',data:top12.map(d=>parseFloat(d.summary['HUB'].正确率)),backgroundColor:CHART_COLORS.hub,borderRadius:4,borderWidth:1,borderColor:CHART_COLORS.hub},
+        {label:'打卡率',data:top12.map(d=>parseFloat(d.summary['打卡率'].打卡率)),backgroundColor:CHART_COLORS.punch,borderRadius:4,borderWidth:1,borderColor:CHART_COLORS.punch},
+      ]
+    },
+    options:{
+      responsive:true,
+      scales:{
+        y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},
+        x:{ticks:{color:'#94a3b8'},grid:{display:false}}
+      },
+      plugins:{legend:{labels:{color:'#94a3b8'}}}
+    }
+  });
+  drawOverviewLineChart(departments);
+}
+
+function drawOverviewLineChart(departments) {
+  if(chartInstances.mainLine) chartInstances.mainLine.destroy();
+  const top12 = departments.slice(0,12);
+  const labels = top12.map(d=>d.name.length>6?d.name.slice(0,6)+'…':d.name);
+  const ctx = document.getElementById('mainLineChart');
+  if(!ctx) return;
+  const datasets = [
+    {label:'排班率',data:top12.map(d=>parseFloat(d.summary['排班'].排班率)),borderColor:CHART_COLORS.schedule,backgroundColor:'transparent',tension:0.3,pointRadius:3,pointHoverRadius:5},
+    {label:'正确率',data:top12.map(d=>parseFloat(d.summary['排班正确'].正确率)),borderColor:CHART_COLORS.correct,backgroundColor:'transparent',tension:0.3,pointRadius:3,pointHoverRadius:5},
+    {label:'HUB正确率',data:top12.map(d=>parseFloat(d.summary['HUB'].正确率)),borderColor:CHART_COLORS.hub,backgroundColor:'transparent',tension:0.3,pointRadius:3,pointHoverRadius:5},
+    {label:'打卡率',data:top12.map(d=>parseFloat(d.summary['打卡率'].打卡率)),borderColor:CHART_COLORS.punch,backgroundColor:'transparent',tension:0.3,pointRadius:3,pointHoverRadius:5},
+  ];
+  chartInstances.mainLine = new Chart(ctx, {
+    type:'line',
+    data:{labels,datasets},
+    options:{
+      responsive:true,
+      scales:{
+        y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},
+        x:{ticks:{color:'#94a3b8'},grid:{display:false}}
+      },
+      plugins:{legend:{labels:{color:'#94a3b8'}}}
+    }
+  });
+}
+
+function drawSubDeptChart(summary) {
+  if(chartInstances.sub) chartInstances.sub.destroy();
+  const ctx = document.getElementById('subDeptChart');
+  if(!ctx) return;
+  const vals = [
+    {label:'排班率',v:parseFloat(summary['排班'].排班率)},
+    {label:'正确率',v:parseFloat(summary['排班正确'].正确率)},
+    {label:'HUB',v:parseFloat(summary['HUB'].正确率)},
+    {label:'打卡率',v:parseFloat(summary['打卡率'].打卡率)},
+  ];
+  const colors = vals.map(x => {
+    if(x.label==='排班率') return x.v>=100?'#22c55e':x.v>=90?'#eab308':'#ef4444';
+    return x.v>=90?'#22c55e':x.v>=50?'#eab308':'#ef4444';
+  });
+  chartInstances.sub = new Chart(ctx, {
+    type:'bar',
+    data:{labels:vals.map(v=>v.label),datasets:[{data:vals.map(v=>v.v),backgroundColor:colors,borderRadius:4}]},
+    options:{responsive:true,scales:{y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},x:{ticks:{color:'#94a3b8'}}},plugins:{legend:{display:false}}}
+  });
+  drawSubDeptLineChart(summary);
+}
+
+function drawSubDeptLineChart(summary) {
+  if(chartInstances.subLine) chartInstances.subLine.destroy();
+  const ctx = document.getElementById('subDeptLineChart');
+  if(!ctx) return;
+  const vals = [
+    {label:'排班率',v:parseFloat(summary['排班'].排班率),c:'#22c55e'},
+    {label:'正确率',v:parseFloat(summary['排班正确'].正确率),c:'#3b82f6'},
+    {label:'HUB',v:parseFloat(summary['HUB'].正确率),c:'#8b5cf6'},
+    {label:'打卡率',v:parseFloat(summary['打卡率'].打卡率),c:'#f97316'},
+  ];
+  chartInstances.subLine = new Chart(ctx, {
+    type:'line',
+    data:{labels:vals.map(v=>v.label),datasets:[{data:vals.map(v=>v.v),borderColor:vals.map(v=>v.c),backgroundColor:'transparent',tension:0.3,pointRadius:4,pointHoverRadius:6,borderWidth:2}]},
+    options:{responsive:true,scales:{y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},x:{ticks:{color:'#94a3b8'}}},plugins:{legend:{display:false}}}
+  });
+}
+
+function showDeptSummary(d3Name) {
+  const dept = STATE.reportData.departments.find(d=>d.name===d3Name);
+  if(!dept) return;
+  currentView = 'dept-summary-'+d3Name;
+  updateNavActive('');
+  const main = document.getElementById('main-content');
+  let html = `<h2 style="font-size:1.3rem;margin-bottom:16px;color:var(--text-primary)">📁 ${d3Name} <span style="font-size:0.85rem;color:var(--text-muted)">${dept.summary.total}人</span></h2>`;
+  html += renderKPICards(dept.summary);
+
+  // 四级部门表格
+  html += `<h3 style="margin:24px 0 12px;color:var(--text-secondary)">四级部门明细</h3>`;
+  html += `<div style="overflow-x:auto;background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;border:1px solid rgba(255,255,255,0.06)">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+      <thead><tr style="background:rgba(30,41,59,0.5)">
+        <th style="padding:10px 12px;text-align:left;color:var(--text-secondary)">四级部门</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">人数</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">日超8H</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">排班率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">正确率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">未排班</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">打卡率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">打卡数</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">补签率</th>
+        <th style="padding:10px 12px;text-align:center;color:var(--text-secondary)">HUB</th>
+      </tr></thead><tbody>`;
+
+  dept.sub_depts.forEach(sd => {
+    const s = sd.summary;
+    html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer" onclick="showDeptView('${d3Name}','${sd.name}')">
+      <td style="padding:10px 12px;color:var(--text-primary)">${sd.name}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s.total}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['日超8H'].total_hours}h</td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('schedule',parseFloat(s['排班'].排班率))==='green'?'var(--green)':getStatusColor('schedule',parseFloat(s['排班'].排班率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['排班'].排班率}</td>
+      <td style="padding:10px 12px;text-align:center;color:${getStatusColor('correct',parseFloat(s['排班正确'].正确率))==='green'?'var(--green)':getStatusColor('correct',parseFloat(s['排班正确'].正确率))==='yellow'?'var(--yellow)':'var(--red)'}">${s['排班正确'].正确率}</td>
+      <td style="padding:10px 12px;text-align:center"><a href="javascript:void(0)" onclick="event.stopPropagation();showDrilldownJSON('drill-${d3Name}-${sd.name}-unscheduled','${sd.name} 未排班',${JSON.stringify(s['排班'].employees_未排班)})" style="color:var(--blue);text-decoration:none">▶</a></td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['打卡率'].打卡率}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['打卡率'].打卡数}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['打卡率'].补签率}</td>
+      <td style="padding:10px 12px;text-align:center;color:var(--text-secondary)">${s['HUB'].正确率}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  // 四级柱状图
+  html += `<div style="margin-top:20px"><div style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06)"><canvas id="deptChart" height="200"></canvas></div></div>`;
+  html += `<div style="margin-top:14px"><div style="background:var(--bg-card);backdrop-filter:blur(20px);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.06)"><canvas id="deptLineChart" height="200"></canvas></div></div>`;
+  main.innerHTML = html;
+
+  setTimeout(() => {
+    if(chartInstances.dept) chartInstances.dept.destroy();
+    var ctx = document.getElementById('deptChart');
+    if(ctx) {
+      var labels = dept.sub_depts.map(function(s){ return s.name.length>8?s.name.slice(0,8)+'…':s.name; });
+      chartInstances.dept = new Chart(ctx, {
+        type:'bar',
+        data:{
+          labels:labels,
+          datasets:[
+            {label:'排班率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['排班'].排班率);}),backgroundColor:'#22c55e',borderRadius:4},
+            {label:'正确率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['排班正确'].正确率);}),backgroundColor:'#3b82f6',borderRadius:4},
+            {label:'HUB正确率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['HUB'].正确率);}),backgroundColor:'#8b5cf6',borderRadius:4},
+            {label:'打卡率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['打卡率'].打卡率);}),backgroundColor:'#f97316',borderRadius:4},
+          ]
+        },
+        options:{
+          responsive:true,
+          scales:{y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},x:{ticks:{color:'#94a3b8'}}},
+          plugins:{legend:{labels:{color:'#94a3b8'}}}
+        }
+      });
+    }
+    // 折线图
+    if(chartInstances.deptLine) chartInstances.deptLine.destroy();
+    var lineCtx = document.getElementById('deptLineChart');
+    if(lineCtx) {
+      var labels2 = dept.sub_depts.map(function(s){ return s.name.length>8?s.name.slice(0,8)+'…':s.name; });
+      chartInstances.deptLine = new Chart(lineCtx, {
+        type:'line',
+        data:{
+          labels:labels2,
+          datasets:[
+            {label:'排班率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['排班'].排班率);}),borderColor:'#22c55e',backgroundColor:'transparent',tension:0.3,pointRadius:3},
+            {label:'正确率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['排班正确'].正确率);}),borderColor:'#3b82f6',backgroundColor:'transparent',tension:0.3,pointRadius:3},
+            {label:'HUB正确率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['HUB'].正确率);}),borderColor:'#8b5cf6',backgroundColor:'transparent',tension:0.3,pointRadius:3},
+            {label:'打卡率',data:dept.sub_depts.map(function(s){return parseFloat(s.summary['打卡率'].打卡率);}),borderColor:'#f97316',backgroundColor:'transparent',tension:0.3,pointRadius:3},
+          ]
+        },
+        options:{
+          responsive:true,
+          scales:{y:{max:105,ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.06)'}},x:{ticks:{color:'#94a3b8'}}},
+          plugins:{legend:{labels:{color:'#94a3b8'}}}
+        }
+      });
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>
