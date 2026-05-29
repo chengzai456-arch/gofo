@@ -355,6 +355,48 @@ tr.summary td {
 </style>
 <script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- ══════════════════════════════════════════════
+     飞书 SSO 权限守卫 — 自动注入（请勿手动修改）
+     ══════════════════════════════════════════════ -->
+<script>
+(function(){'use strict';
+var SSO_BACKEND_URL='http://localhost:3000';
+var LOGIN_PAGE='login.html';
+var PAGE_REGION='Ground';
+
+async function _auth_check(){
+ var t=localStorage.getItem('token');
+ if(!t){_auth_redirect();return;}
+ try{
+  var r=await fetch(SSO_BACKEND_URL+'/api/auth/me',{headers:{'Authorization':'Bearer '+t}});
+  if(!r.ok){localStorage.removeItem('token');localStorage.removeItem('user');_auth_redirect();return;}
+  var u=await r.json();
+  localStorage.setItem('user',JSON.stringify(u));
+  if(PAGE_REGION&&u.pages&&u.pages.indexOf(PAGE_REGION)===-1){_auth_forbidden(u.name||'?',PAGE_REGION);return;}
+  window.__AUTH_USER__=u;
+  window.dispatchEvent(new CustomEvent('auth:ready',{detail:u}));
+ }catch(e){
+  console.warn('[Auth] 后端不可达:',e.message);
+  window.dispatchEvent(new CustomEvent('auth:offline',{detail:{error:e.message}}));
+ }
+}
+function _auth_redirect(){
+ var cp=window.location.pathname.split('/').pop()||'';
+ if(cp===LOGIN_PAGE)return;
+ window.location.href=LOGIN_PAGE;
+}
+function _auth_forbidden(nm,rg){
+ document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#080c14,#0c1220,#0a0f1a);font-family:-apple-system,BlinkMacSystemFont,\'PingFang SC\',sans-serif;color:#f1f5f9;"><div style="text-align:center;padding:48px 40px;background:rgba(15,23,42,0.60);backdrop-filter:blur(20px);border-radius:16px;border:1px solid rgba(239,68,68,0.20);max-width:420px;"><div style="font-size:48px;margin-bottom:16px;">🚫</div><h2 style="font-size:20px;margin-bottom:8px;color:#ef4444;">无访问权限</h2><p style="color:#94a3b8;font-size:14px;line-height:1.6;margin-bottom:20px;">'+_e(nm)+'，你没有访问 '+_e(rg)+' 大区数据的权限。<br>如需访问请联系管理员。</p><button onclick="location.href=\''+LOGIN_PAGE+'\'" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.10);padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;">返回登录页</button></div></div>';
+}
+function _e(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+document.documentElement.style.visibility='hidden';
+_auth_check().finally(function(){document.documentElement.style.visibility='';});
+window.__AUTH__={SSO_BACKEND_URL:SSO_BACKEND_URL,getUser:function(){return window.__AUTH_USER__;},getToken:function(){return localStorage.getItem('token');},logout:function(){localStorage.removeItem('token');localStorage.removeItem('user');window.location.href=LOGIN_PAGE;},isAdmin:function(){return window.__AUTH_USER__&&window.__AUTH_USER__.role==='admin';},canAccess:function(r){return window.__AUTH_USER__&&window.__AUTH_USER__.pages&&window.__AUTH_USER__.pages.indexOf(r)!==-1;}};
+})();
+</script>
+<!-- ══════════════════════════════════════════════ -->
+
+
 </head>
 <body>
 
