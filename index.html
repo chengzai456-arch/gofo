@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤数据分析工作台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.15), transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.12), transparent 60%),
+                radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.10), transparent 60%),
+                linear-gradient(135deg, #080c14 0%, #0c1220 40%, #0a0f1a 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 1000px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f1f5f9;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 14px;
+    color: #94a3b8;
+    letter-spacing: 4px;
+  }
+  .header .date-badge {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 16px;
+    border-radius: 20px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+    font-size: 13px;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    padding-left: 4px;
+  }
+  .grid {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(148, 163, 184, 0.08);
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.15), transparent);
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    background: rgba(30, 41, 59, 0.65);
+    border-color: rgba(148, 163, 184, 0.18);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .card-home .card-icon { background: rgba(59, 130, 246, 0.15); }
+  .card-report .card-icon { background: rgba(168, 85, 247, 0.15); }
+  .card-region .card-icon { background: rgba(6, 182, 212, 0.12); }
+  .card-info { flex: 1; min-width: 0; }
+  .card-label { font-size: 15px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px; }
+  .card-desc { font-size: 12px; color: #64748b; }
+  .card-arrow {
+    font-size: 18px;
+    color: #475569;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .card:hover .card-arrow {
+    color: #60a5fa;
+    transform: translateX(3px);
+  }
+  .highlight-card {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.2);
+  }
+  .highlight-card::before {
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.25), transparent);
+  }
+  .highlight-card .card-label { color: #93c5fd; }
+  .region-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    letter-spacing: 1px;
+  }
+  .badge-we { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+  .badge-ne { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+  .badge-fl { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+  .badge-tx { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+  .badge-ms { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+  .badge-ground { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+  .badge-gl { background: rgba(6, 182, 212, 0.15); color: #22d3ee; }
+  .footer {
+    text-align: center;
+    color: #475569;
+    font-size: 12px;
+    padding-top: 20px;
+  }
+  @media (max-width: 768px) {
+    .grid-2, .grid-4 { grid-template-columns: 1fr; }
+    .header h1 { font-size: 24px; }
+  }
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>考勤数据分析工作台</h1>
+    <div class="subtitle">ATTENDANCE ANALYTICS DASHBOARD</div>
+    <div class="date-badge">批次 2026-05-27</div>
+  </div>
+
+  <div class="section-title">核心看板</div>
+  <div class="grid grid-2">
+    <a href="home.html" class="card card-home highlight-card">
+      <div class="card-icon">🏠</div>
+      <div class="card-info">
+        <div class="card-label">考勤首页</div>
+        <div class="card-desc">全局 KPI 仪表盘 · 7 大区概览 · 快速入口</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="report.html" class="card card-report">
+      <div class="card-icon">📊</div>
+      <div class="card-info">
+        <div class="card-label">考勤全览报告</div>
+        <div class="card-desc">21 部门目录树 · 穿透明细 · KPI 柱状图</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+
+  <div class="section-title">大区专项报告</div>
+  <div class="grid grid-4">
+    <a href="region_WE.html" class="card card-region">
+      <div class="card-icon">🌊</div>
+      <div class="card-info">
+        <div class="card-label">WE 美西大区 <span class="region-badge badge-we">WE</span></div>
+        <div class="card-desc">美西大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_NE.html" class="card card-region">
+      <div class="card-icon">🗽</div>
+      <div class="card-info">
+        <div class="card-label">NE 东北大区 <span class="region-badge badge-ne">NE</span></div>
+        <div class="card-desc">东北大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_FL.html" class="card card-region">
+      <div class="card-icon">🌴</div>
+      <div class="card-info">
+        <div class="card-label">FL 佛州大区 <span class="region-badge badge-fl">FL</span></div>
+        <div class="card-desc">佛州大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_TX.html" class="card card-region">
+      <div class="card-icon">⭐</div>
+      <div class="card-info">
+        <div class="card-label">TX 德州大区 <span class="region-badge badge-tx">TX</span></div>
+        <div class="card-desc">德州大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_MS.html" class="card card-region">
+      <div class="card-icon">🏙️</div>
+      <div class="card-info">
+        <div class="card-label">MS 中南大区 <span class="region-badge badge-ms">MS</span></div>
+        <div class="card-desc">中南大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_Ground.html" class="card card-region">
+      <div class="card-icon">🏗️</div>
+      <div class="card-info">
+        <div class="card-label">Ground 项目部 <span class="region-badge badge-ground">GD</span></div>
+        <div class="card-desc">项目部考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+    <a href="region_GL.html" class="card card-region">
+      <div class="card-icon">🏔️</div>
+      <div class="card-info">
+        <div class="card-label">GL 大湖大区 <span class="region-badge badge-gl">GL</span></div>
+        <div class="card-desc">大湖大区考勤分析</div>
+      </div>
+      <span class="card-arrow">→</span>
+    </a>
+  </div>
+
+  <div class="footer">考勤数据分析工作台 · 920 人 · 21 部门 · Powered by WorkBuddy</div>
+</div>
+</body>
+</html>
