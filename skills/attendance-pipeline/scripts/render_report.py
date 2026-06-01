@@ -759,15 +759,20 @@ function drawBarChart(canvasId, config) {
 }
 
 // ========== Filter Logic ==========
-var activeMetricFilters = { schedule: true, correct: false, hub: false, punch: false };
+var activeMetricFilters = { schedule: true, correct: true, hub: true, punch: true };
 
-function renderFilterBar(prefix) {
+function renderSearchBar(prefix) {
   return '<div class="filter-bar">' +
     '<input type="text" placeholder="搜索部门名称..." oninput="applyFilters(\'' + prefix + '\')" id="' + prefix + '_search">' +
+  '</div>';
+}
+
+function renderChartFilter(prefix) {
+  return '<div class="filter-bar">' +
     '<span class="filter-toggle active" data-metric="schedule" onclick="toggleMetric(\'' + prefix + '\',\'schedule\',this)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
-    '<span class="filter-toggle" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
-    '<span class="filter-toggle" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
-    '<span class="filter-toggle" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
+    '<span class="filter-toggle active" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
+    '<span class="filter-toggle active" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
+    '<span class="filter-toggle active" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
     '<span class="filter-clear" onclick="clearFilters(\'' + prefix + '\')">重置</span>' +
   '</div>';
 }
@@ -779,18 +784,20 @@ function toggleMetric(prefix, metric, el) {
 }
 
 function updateChartVisibility(prefix) {
-  var inst = chartInstances[prefix + 'Chart'];
-  if (!inst) { inst = chartInstances[prefix + 'LineChart']; }
-  if (!inst) return;
-  var ds = inst.data.datasets;
-  for (var i = 0; i < ds.length; i++) {
-    var d = ds[i].label;
-    if (d.indexOf('排班率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.schedule);
-    else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
-    else if (d.indexOf('HUB') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.hub);
-    else if (d.indexOf('打卡率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.punch);
-  }
-  inst.update();
+  var names = [prefix + 'Chart', prefix + 'LineChart'];
+  names.forEach(function(name) {
+    var inst = chartInstances[name];
+    if (!inst) return;
+    var ds = inst.data.datasets;
+    for (var i = 0; i < ds.length; i++) {
+      var d = ds[i].label;
+      if (d.indexOf('排班率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.schedule);
+      else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
+      else if (d.indexOf('HUB') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.hub);
+      else if (d.indexOf('打卡率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.punch);
+    }
+    inst.update();
+  });
 }
 
 function applyFilters(prefix) {
@@ -805,7 +812,7 @@ function applyFilters(prefix) {
 function clearFilters(prefix) {
   var inp = document.getElementById(prefix + '_search');
   if (inp) inp.value = '';
-  activeMetricFilters = { schedule: true, correct: false, hub: false, punch: false };
+  activeMetricFilters = { schedule: true, correct: true, hub: true, punch: true };
   document.querySelectorAll('.filter-toggle').forEach(function(el) {
     var m = el.getAttribute('data-metric');
     el.classList.toggle('active', activeMetricFilters[m] === true);
@@ -922,18 +929,6 @@ function renderOverview() {
       o['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
   '</div>' +
 
-  // ---- 数据口径 (穿透明细卡片) ----
-  '<div class="caliber-section">' +
-    '<h3>&#x1F50D; 数据口径 · 点击穿透查看明细</h3>' +
-    '<div class="caliber-grid">' +
-      caliberCard('日超8H员工', o['日超8H'].employees, '\u23F0') +
-      caliberCard('未排班员工', o['排班']['employees_未排班'], '\u{1F6AB}') +
-      caliberCard('排班不正确员工', o['排班正确']['employees_不正确'], '\u274C') +
-      caliberCard('打卡明细', punchD.employees, '\u{1F4CB}') +
-      caliberCard('HUB排班不正确', o['HUB']['employees_不正确'], '\u{1F537}') +
-    '</div>' +
-  '</div>' +
-
   // ---- 数据口径说明 ----
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
     '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
@@ -963,11 +958,11 @@ function renderOverview() {
     '</tr>';
   }).join('');
 
-  var table = renderFilterBar('overview') +
+  var table = renderSearchBar('overview') +
     '<div class="table-wrap">' +
     '<h3>&#x1F4CA; 部门总览（点击部门名查看四级明细）</h3>' +
     '<table id="overview_table"><thead><tr>' +
-    '<th>部门</th><th>人数</th><th>日超8H合计</th><th>排班率</th><th>排班正确率</th><th>未排班数</th><th>打卡率</th><th>打卡数</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
     '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
 
   // ---- Bar Chart (放在明细表格下面) ----
@@ -978,7 +973,8 @@ function renderOverview() {
   var hubData = topDepts.map(function(d) { return parseFloat(d.summary['HUB']['正确率']); });
   var punchData = topDepts.map(function(d) { return parseFloat(d.summary['打卡率']['打卡率']); });
 
-  var chartHtml = '<div class="chart-wrap"><h3>&#x1F4CA; 部门KPI对比（前12部门）</h3>' +
+  var chartHtml = renderChartFilter('overview') +
+    '<div class="chart-wrap"><h3>&#x1F4CA; 部门KPI对比（前12部门）</h3>' +
     '<div style="position:relative; height:380px;"><canvas id="overviewChart"></canvas></div></div>' +
     '<div class="chart-wrap"><h3>&#x1F4C8; 部门KPI趋势（前12部门）</h3>' +
     '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>';
@@ -988,9 +984,9 @@ function renderOverview() {
 
   var lineDs = [
     { label: '排班率', data: scheduleData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#22c55e' },
-    { label: '排班正确率', data: correctData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3b82f6', hidden: true },
-    { label: 'HUB正确率', data: hubData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#8b5cf6', hidden: true },
-    { label: '打卡率', data: punchData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316', hidden: true },
+    { label: '排班正确率', data: correctData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3b82f6' },
+    { label: 'HUB正确率', data: hubData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+    { label: '打卡率', data: punchData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316' },
   ];
 
   setTimeout(function() {
@@ -999,9 +995,9 @@ function renderOverview() {
         labels: barLabels,
         datasets: [
           { label: '排班率', data: scheduleData, backgroundColor: chartColors.green, borderRadius: 4, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1 },
-          { label: '排班正确率', data: correctData, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1, hidden: true },
-          { label: 'HUB正确率', data: hubData, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1, hidden: true },
-          { label: '打卡率', data: punchData, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1, hidden: true },
+          { label: '排班正确率', data: correctData, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 },
+          { label: 'HUB正确率', data: hubData, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1 },
+          { label: '打卡率', data: punchData, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1 },
         ]
       },
       legend: true,
@@ -1098,10 +1094,10 @@ function renderDepartment(dept) {
     '<td>' + fmtH(s['本周加班工时']) + '</td>' +
     '<td>' + fmtH(s['上周加班工时']) + '</td></tr>';
 
-  html += renderFilterBar('dept') +
+  html += renderSearchBar('dept') +
     '<div class="table-wrap"><h3>&#x1F4CA; 四级部门明细</h3>' +
     '<table id="dept_table"><thead><tr>' +
-    '<th>四级部门</th><th>人数</th><th>日超8H合计</th><th>排班率</th><th>排班正确率</th><th>未排班数</th><th>打卡率</th><th>打卡数</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>四级部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
     '</tr></thead><tbody>' + subRows + '</tbody></table></div>';
 
   // 柱状图 (放在明细表格下面)
@@ -1112,7 +1108,8 @@ function renderDepartment(dept) {
     var subHub = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['HUB']['正确率']); });
     var subPunch = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['打卡率']['打卡率']); });
 
-    html += '<div class="chart-wrap"><h3>&#x1F4CA; 四级部门KPI对比</h3>' +
+    html += renderChartFilter('dept') +
+    '<div class="chart-wrap"><h3>&#x1F4CA; 四级部门KPI对比</h3>' +
       '<div style="position:relative; height:350px;"><canvas id="deptChart"></canvas></div></div>' +
       '<div class="chart-wrap"><h3>&#x1F4C8; 四级部门KPI趋势</h3>' +
       '<div style="position:relative; height:350px;"><canvas id="deptLineChart"></canvas></div></div>';
@@ -1148,9 +1145,9 @@ function renderDepartment(dept) {
         labels: cfg.labels,
         datasets: [
           { label: '排班率', data: cfg.schedule, backgroundColor: chartColors.green, borderRadius: 4, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1 },
-          { label: '排班正确率', data: cfg.correct, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1, hidden: true },
-          { label: 'HUB正确率', data: cfg.hub, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1, hidden: true },
-          { label: '打卡率', data: cfg.punch, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1, hidden: true },
+          { label: '排班正确率', data: cfg.correct, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 },
+          { label: 'HUB正确率', data: cfg.hub, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1 },
+          { label: '打卡率', data: cfg.punch, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1 },
         ]
       },
       legend: true,
@@ -1162,9 +1159,9 @@ function renderDepartment(dept) {
         labels: cfg.labels,
         datasets: [
           { label: '排班率', data: cfg.schedule, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#22c55e' },
-          { label: '排班正确率', data: cfg.correct, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3b82f6', hidden: true },
-          { label: 'HUB正确率', data: cfg.hub, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#8b5cf6', hidden: true },
-          { label: '打卡率', data: cfg.punch, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316', hidden: true },
+          { label: '排班正确率', data: cfg.correct, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3b82f6' },
+          { label: 'HUB正确率', data: cfg.hub, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+          { label: '打卡率', data: cfg.punch, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316' },
         ]
       },
       legend: true,
