@@ -137,6 +137,9 @@ body::before {
   box-shadow: 0 1px 10px rgba(0,0,0,0.25); transition: all 0.25s;
 }
 .region-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(96,165,250,0.15);
+}
   transform: translateY(-2px); border-color: rgba(255,255,255,0.10);
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
@@ -480,7 +483,8 @@ document.getElementById('pageDate').textContent = '数据日期: ' + DATA.overvi
     return 'ok';
   }
   document.getElementById('regionGrid').innerHTML = DATA.regions.map(function(r) {
-    return '<div class="region-card"><div class="r-name">' + r.name.replace(/ .*$/, '') + '</div><div class="r-stats"><span>' + r.total + '\u4EBA</span><span class="' + sc(r.sched,'sched') + '">' + r.sched + '</span><span class="' + sc(r.correct,'correct') + '">' + r.correct + '</span><span class="' + sc(r.punch,'punch') + '">' + r.punch + '</span></div></div>';
+    var code = r.name.replace(/ .*$/, '');
+    return '<a href="region_' + code + '.html" class="region-card" style="text-decoration:none;cursor:pointer"><div class="r-name">' + r.name.replace(/ .*$/, '') + '</div><div class="r-stats"><span>' + r.total + '\u4EBA</span><span class="' + sc(r.sched,'sched') + '">' + r.sched + '</span><span class="' + sc(r.correct,'correct') + '">' + r.correct + '</span><span class="' + sc(r.punch,'punch') + '">' + r.punch + '</span></div></a>';
   }).join('');
 })();
 
