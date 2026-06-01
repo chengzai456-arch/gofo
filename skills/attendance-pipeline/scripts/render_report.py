@@ -396,7 +396,6 @@ tr.summary td {
   .fab-btn { padding: 8px 14px; font-size: 11.5px; }
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -592,8 +591,6 @@ function shareUrl() {
 })();
 
 // ========== Data ==========
-</script>
-<script>
 var DATA = __DATA_JSON__;
 
 // ========== Helpers ==========
@@ -1342,10 +1339,8 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ========== Initialize ==========
-setTimeout(function() {
-  renderSidebar();
-  showView('overview');
-}, 10);
+renderSidebar();
+showView('overview');
 </script>
 </body>
 </html>"""
