@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤数据看板</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #ffffff;
+  color: #1a1a2e;
+  min-height: 100vh; overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Content Layer ===== */
+.content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px 24px;
+  gap: 28px;
+}
+
+/* ===== Hero Section ===== */
+.hero {
+  text-align: center; max-width: 700px;
+}
+.hero .badge {
+  display: inline-block; padding: 5px 16px; border-radius: 50px;
+  background: rgba(59,130,246,0.10); border: 1px solid rgba(59,130,246,0.20);
+  font-size: 11.5px; font-weight: 600; color: #3b82f6;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+}
+.hero h1 {
+  font-size: 36px; font-weight: 900; color: #1a1a2e;
+  letter-spacing: -1px; line-height: 1.2; margin-bottom: 10px;
+}
+.hero h1 span { background: linear-gradient(135deg, #3b82f6, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero .date {
+  font-size: 13px; color: #6b7280; font-weight: 500; margin-top: 6px;
+}
+
+/* ===== KPI Cards ===== */
+.kpi-grid {
+  display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
+}
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb; border-radius: 16px;
+  padding: 22px 28px; min-width: 160px; text-align: center;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06); position: relative; overflow: hidden;
+  transition: all 0.3s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: #d1d5db;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+.kpi-card .kpi-icon { font-size: 22px; margin-bottom: 8px; }
+.kpi-card .kpi-value {
+  font-size: 30px; font-weight: 900; line-height: 1.1; color: #1a1a2e; margin-bottom: 4px;
+}
+.kpi-card .kpi-label {
+  font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+}
+.kpi-card .kpi-sub {
+  font-size: 11px; color: #9ca3af; margin-top: 2px; font-weight: 500;
+}
+.kpi-card.status-ok    { border-bottom: 3px solid #22c55e; }
+.kpi-card.status-warn  { border-bottom: 3px solid #eab308; }
+.kpi-card.status-bad   { border-bottom: 3px solid #ef4444; }
+
+/* ===== CTA Button ===== */
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 40px; border-radius: 50px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border: 1px solid #3b82f6;
+  color: #ffffff; font-size: 16px; font-weight: 700;
+  text-decoration: none; letter-spacing: -0.2px;
+  cursor: pointer; transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(59,130,246,0.2);
+}
+.cta-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.35);
+  transform: translateY(-2px);
+}
+.cta-btn .cta-arrow {
+  transition: transform 0.3s; font-size: 20px;
+}
+.cta-btn:hover .cta-arrow { transform: translateX(4px); }
+
+/* ===== Region Cards ===== */
+.region-section { text-align: center; max-width: 900px; }
+.region-section h2 {
+  font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 600; margin-bottom: 14px;
+}
+.region-grid {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+}
+.region-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb; border-radius: 14px;
+  padding: 14px 18px; min-width: 130px; text-align: center;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06); transition: all 0.25s;
+}
+.region-card:hover {
+  transform: translateY(-2px); border-color: #d1d5db;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+.region-card .r-name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+.region-card .r-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; font-size: 11px; color: #6b7280; }
+.region-card .r-stats span { white-space: nowrap; }
+.region-card .r-stats .ok { background: #dcfce7; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
+.region-card .r-stats .warn { background: #fef9c3; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
+.region-card .r-stats .bad { background: #fee2e2; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 26px; }
+  .kpi-grid { gap: 10px; }
+  .kpi-card { padding: 16px 20px; min-width: 130px; }
+  .kpi-card .kpi-value { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="content">
+
+<div class="content">
+  <div class="hero">
+    <div class="badge">Attendance Dashboard</div>
+    <h1>考勤<span>数据看板</span></h1>
+    <div class="date" id="pageDate"></div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <a class="cta-btn" href="report.html">
+    <span>查看全览</span><span class="cta-arrow">&rarr;</span>
+  </a>
+
+  <div class="region-section">
+    <h2>各大区概览</h2>
+    <div class="region-grid" id="regionGrid"></div>
+  </div>
+</div>
+
+<script>
+var DATA = {"overview": {"total": 921, "date": "2026/05/27", "dept_count": 21, "day8h_rate": "43.5%", "sched_rate": "98.3%", "correct_rate": "70.6%", "punch_rate": "70.2%"}, "regions": [{"name": "WE \u7f8e\u897f\u5927\u533a", "total": 180, "day8h": "43.9%", "sched": "98.9%", "correct": "77.5%", "punch": "80.7%", "url": "region_WE.html"}, {"name": "NE \u4e1c\u5317\u5927\u533a", "total": 168, "day8h": "53.6%", "sched": "98.8%", "correct": "72.9%", "punch": "73.9%", "url": "region_NE.html"}, {"name": "FL \u4f5b\u5dde\u5927\u533a", "total": 106, "day8h": "48.1%", "sched": "100.0%", "correct": "78.3%", "punch": "74.1%", "url": "region_FL.html"}, {"name": "MS \u4e2d\u5357\u5927\u533a", "total": 89, "day8h": "37.1%", "sched": "96.6%", "correct": "70.9%", "punch": "75.0%", "url": "region_MS.html"}, {"name": "TX \u5fb7\u5dde\u5927\u533a", "total": 88, "day8h": "31.8%", "sched": "98.9%", "correct": "75.9%", "punch": "78.4%", "url": "region_TX.html"}, {"name": "Ground\u9879\u76ee\u90e8", "total": 82, "day8h": "39.0%", "sched": "97.6%", "correct": "63.7%", "punch": "59.5%", "url": "region_Ground.html"}, {"name": "GL \u5927\u6e56\u5927\u533a", "total": 80, "day8h": "33.8%", "sched": "92.5%", "correct": "74.3%", "punch": "67.8%", "url": "region_GL.html"}]};
+
+// Page date
+document.getElementById('pageDate').textContent = '数据日期: ' + DATA.overview.date + ' | ' + DATA.overview.total + '人 | ' + DATA.overview.dept_count + '个部门';
+
+// ===== Render KPI Cards =====
+(function() {
+  var ov = DATA.overview;
+  function statusCls(value, type) {
+    var n = parseFloat(value);
+    if (type === 'punch' || type === 'sched') return n >= 100 ? 'status-ok' : (n >= 90 ? 'status-warn' : 'status-bad');
+    if (type === 'correct') return n >= 90 ? 'status-ok' : (n >= 50 ? 'status-warn' : 'status-bad');
+    return 'status-ok';
+  }
+  var cards = [
+    { icon: '\u{1F465}', value: ov.total, label: '\u603B\u4EBA\u6570', sub: ov.dept_count+'\u4E2A\u90E8\u95E8', cls: '' },
+    { icon: '\u23F0', value: ov.day8h_rate, label: '\u65E5\u8D858\u5C0F\u65F6', sub: '\u8D85\u6807\u7387', cls: 'status-warn' },
+    { icon: '\u{1F4CB}', value: ov.sched_rate, label: '\u6392\u73ED\u7387', sub: '\u5DF2\u6392\u73ED', cls: statusCls(ov.sched_rate, 'sched') },
+    { icon: '\u2705', value: ov.correct_rate, label: '\u6392\u73ED\u6B63\u786E\u7387', sub: '\u6B63\u786E\u5360\u6BD4', cls: statusCls(ov.correct_rate, 'correct') },
+    { icon: '\u2705', value: ov.punch_rate, label: '\u6253\u5361\u7387', sub: '\u6253\u5361\u5360\u6BD4', cls: statusCls(ov.punch_rate, 'punch') },
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map(function(c) {
+    return '<div class="kpi-card ' + c.cls + '"><div class="kpi-icon">' + c.icon + '</div><div class="kpi-value">' + c.value + '</div><div class="kpi-label">' + c.label + '</div><div class="kpi-sub">' + c.sub + '</div></div>';
+  }).join('');
+
+  // Regions
+  function sc(val, type) {
+    var n = parseFloat(val);
+    if (type === 'sched' || type === 'punch') return n >= 100 ? 'ok' : (n >= 90 ? 'warn' : 'bad');
+    if (type === 'correct') return n >= 90 ? 'ok' : (n >= 50 ? 'warn' : 'bad');
+    return 'ok';
+  }
+  document.getElementById('regionGrid').innerHTML = DATA.regions.map(function(r) {
+    return '<div class="region-card" onclick="window.location.href=\'' + r.url + '\'" style="cursor:pointer"><div class="r-name">' + r.name.replace(/ .*$/, '') + '</div><div class="r-stats"><span>' + r.total + '\u4EBA</span><span class="' + sc(r.sched,'sched') + '">\u6392\u73ED\u7387 ' + r.sched + '</span><span class="' + sc(r.correct,'correct') + '">\u6B63\u786E\u7387 ' + r.correct + '</span><span class="' + sc(r.punch,'punch') + '">\u6253\u5361\u7387 ' + r.punch + '</span></div></div>';
+  }).join('');
+})();
+</script>
+</body>
+</html>
