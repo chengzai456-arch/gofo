@@ -366,10 +366,21 @@ var PAGE_REGION='';
 
 async function _auth_check(){
  var t=localStorage.getItem('token');
- if(!t){_auth_redirect();return;}
+ if(!t){window.location.href=LOGIN_PAGE;return;}
  try{
   var r=await fetch(SSO_BACKEND_URL+'/api/auth/me',{headers:{'Authorization':'Bearer '+t}});
-  if(!r.ok){localStorage.removeItem('token');localStorage.removeItem('user');_auth_redirect();return;}
+  if(r.ok){
+   var u=await r.json();
+   localStorage.setItem('user',JSON.stringify(u));
+   if(PAGE_REGION&&u.pages&&u.pages.indexOf(PAGE_REGION)===-1){_auth_forbidden(u.name||'?',PAGE_REGION);return;}
+   window.__AUTH_USER__=u;
+  }
+ }catch(e){console.warn('[Auth] 后端不可达:',e.message);}
+ window.dispatchEvent(new CustomEvent('auth:done'));
+}
+ try{
+  var r=await fetch(SSO_BACKEND_URL+'/api/auth/me',{headers:{'Authorization':'Bearer '+t}});
+  if(r.ok){
   var u=await r.json();
   localStorage.setItem('user',JSON.stringify(u));
   if(PAGE_REGION&&u.pages&&u.pages.indexOf(PAGE_REGION)===-1){_auth_forbidden(u.name||'?',PAGE_REGION);return;}

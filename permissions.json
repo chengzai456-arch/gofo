@@ -1,0 +1,32 @@
+{
+  "admin_open_ids": [],
+  "region_permissions": {
+    "WE": ["ou_21af9d33a592fbdb327e06742a39517e"],
+    "NE": ["ou_21af9d33a592fbdb327e06742a39517e"],
+    "FL": [],
+    "TX": [],
+    "Ground": [],
+    "MS": [],
+    "GL": []
+  },
+  "region_labels": {
+    "WE": "WE大区",
+    "NE": "NE大区",
+    "FL": "FL大区",
+    "TX": "TX大区",
+    "Ground": "Ground大区",
+    "MS": "MS大区",
+    "GL": "GL大区"
+  },
+  "page_files": {
+    "home": "home.html",
+    "report": "report.html",
+    "WE": "region_WE.html",
+    "NE": "region_NE.html",
+    "FL": "region_FL.html",
+    "TX": "region_TX.html",
+    "Ground": "region_Ground.html",
+    "MS": "region_MS.html",
+    "GL": "region_GL.html"
+  }
+}
