@@ -420,6 +420,9 @@ tr.summary td {
 </div>
 
 <script>
+window.onerror = function(msg, url, line) {
+  document.getElementById('mainContent').innerHTML = '<div style="padding:40px;color:red;font-family:monospace"><h3>JS Error</h3><p>' + msg + '</p><p>Line: ' + line + '</p></div>';
+};
 // ========== FAB Actions: 下载图片 & 分享网址 ==========
 function downloadImage() {
   var toast = document.getElementById('downloadToast');
