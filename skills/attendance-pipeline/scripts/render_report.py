@@ -940,7 +940,7 @@ function renderOverview() {
     '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
     '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
     '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
-  '</div>' +
+  '</div>';
 
   // Department table (明细先于柱状图)
   var tableRows = DATA.departments.map(function(dept, i) {
@@ -1063,7 +1063,7 @@ function renderDepartment(dept) {
     '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
     '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
     '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
-  '</div>' +
+  '</div>';
 
   // 四级部门明细表 (放在柱状图前面)
   var subRows = dept.sub_depts.map(function(sub, j) {
@@ -1219,7 +1219,7 @@ function renderSubDepartment(dept, sub) {
     '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
     '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
     '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
-  '</div>' +
+  '</div>';
 
   // 完整指标表 (放在柱状图前面)
   html += '<div class="table-wrap"><h3>&#x1F4CA; ' + sub.name + ' - 完整指标</h3>' +
