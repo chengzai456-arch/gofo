@@ -420,9 +420,8 @@ tr.summary td {
 </div>
 
 <script>
-window.onerror = function(msg, url, line) {
-  document.getElementById('mainContent').innerHTML = '<div style="padding:40px;color:red;font-family:monospace"><h3>JS Error</h3><p>' + msg + '</p><p>Line: ' + line + '</p></div>';
-};
+// DEBUG: force content update
+document.getElementById('mainContent').innerHTML = '<h1>Script loaded</h1>';
 // ========== FAB Actions: 下载图片 & 分享网址 ==========
 function downloadImage() {
   var toast = document.getElementById('downloadToast');
@@ -1311,8 +1310,13 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ========== Initialize ==========
-renderSidebar();
-showView('overview');
+try {
+  renderSidebar();
+  showView('overview');
+} catch(e) {
+  document.getElementById('mainContent').innerHTML = '<div style="padding:40px;color:red"><h3>Init Error</h3><p>' + e.message + '</p><pre>' + e.stack + '</pre></div>';
+  throw e;
+}
 </script>
 </body>
 </html>
