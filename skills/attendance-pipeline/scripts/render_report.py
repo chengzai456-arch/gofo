@@ -396,6 +396,7 @@ tr.summary td {
   .fab-btn { padding: 8px 14px; font-size: 11.5px; }
 }
 </style>
+<script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -728,6 +729,7 @@ function destroyAllCharts() {
 }
 
 function drawBarChart(canvasId, config) {
+  if (typeof Chart === 'undefined') return;
   var ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
