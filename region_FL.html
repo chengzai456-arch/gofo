@@ -153,31 +153,27 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.1; color: #1a1a2e;
 }
 .card-desc { font-size: 12px; color: #9ca3af; font-weight: 500; }
-.card-caliber {
-  font-size: 10.5px; color: #6b7280; font-weight: 400;
-  margin-top: 4px; line-height: 1.4;
-  font-style: italic;
-}
 
-/* Caliber (数据口径) cards */
-.caliber-section { margin-bottom: 24px; }
-.caliber-section h3 { font-size: 14px; font-weight: 600; color: #6b7280; margin-bottom: 12px; letter-spacing: 1px; }
-.caliber-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+/* Employee drill-down cards */
 .caliber-card {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 16px; border-radius: 10px;
-  background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.08); cursor: pointer;
-  transition: all 0.25s; text-decoration: none;
+  background: #ffffff; border: 1px solid #e5e7eb;
+  cursor: pointer; transition: all 0.25s; text-decoration: none;
 }
-.caliber-card:hover { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); transform: translateY(-1px); }
+.caliber-card:hover { background: #eff6ff; border-color: #93c5fd; transform: translateY(-1px); }
 .caliber-icon { font-size: 18px; flex-shrink: 0; }
-.caliber-title { flex: 1; font-size: 13px; color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.caliber-count { font-size: 12px; color: #60a5fa; font-weight: 600; }
+.caliber-title { flex: 1; font-size: 13px; color: #1a1a2e; font-weight: 500; }
+.caliber-count { font-size: 12px; color: #3b82f6; font-weight: 600; }
 
-/* Drill-data (可点击穿透数据) */
-.drill-data { cursor: pointer; color: #60a5fa; font-weight: 600; border-bottom: 1px dashed rgba(96, 165, 250, 0.4); transition: all 0.2s; }
-.drill-data:hover { color: #93c5fd; border-bottom-color: #93c5fd; }
+/* Data caliber info card */
+.data-caliber {
+  background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 16px;
+  padding: 16px 24px; margin-bottom: 24px;
+}
+.data-caliber h4 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+.data-caliber .caliber-item { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+.data-caliber .caliber-item strong { color: #1a1a2e; }
 
 /* Card Status Accents (colored left border + light bg) */
 .card.status-ok    { border-left: 3px solid #22c55e; background: #f0fdf4; }
@@ -658,14 +654,13 @@ function infoBtn(label, employees) {
 }
 
 // ========== Card Component ==========
-function metricCard(title, valStr, desc, statusCls, cardCls, caliber) {
+function metricCard(title, valStr, desc, statusCls, cardCls) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
   return '<div class="card' + cardC + '">' +
     '<div class="card-title">' + title + '</div>' +
     '<div class="card-value' + valC + '">' + valStr + '</div>' +
     (desc ? '<div class="card-desc">' + desc + '</div>' : '') +
-    (caliber ? '<div class="card-caliber">\u{1F4CA} ' + caliber + '</div>' : '') +
   '</div>';
 }
 
@@ -869,8 +864,7 @@ function renderOverview() {
     metricCard('\uD83D\uDCCB 排班率', o['排班']['排班率'],
       '已排班 ' + o['排班']['已排班'] + ' / 未排班 ' + o['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
-      cardStatusClass(schedRate, 'schedule'),
-      '已排班人数/总人数') +
+      cardStatusClass(schedRate, 'schedule')) +
     metricCard('\u2705 排班正确率', o['排班正确']['正确率'],
       '正确 ' + o['排班正确']['正确'] + ' / 不正确 ' + o['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
@@ -878,8 +872,7 @@ function renderOverview() {
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6\u6253\u5361\u6570 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch'),
-      '当天员工打卡次数总和/当天应出勤人员标准打卡总和') +
+      cardStatusClass(punchRate, 'punch')) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
@@ -887,8 +880,7 @@ function renderOverview() {
     metricCard('\uD83D\uDD37 HUB排班正确率', o['HUB']['正确率'],
       'HUB总 ' + o['HUB'].total + '人 | 目标90% | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub'),
-      'HUB首打卡跟班次卡点差1h以内人数/HUB总人数') +
+      cardStatusClass(hubRate, 'hub')) +
     metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']),
       '\u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6: ' + fmtH(o['上周加班工时']),
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
@@ -905,6 +897,13 @@ function renderOverview() {
       caliberCard('打卡明细', punchD.employees, '\u{1F4CB}') +
       caliberCard('HUB排班不正确', o['HUB']['employees_不正确'], '\u{1F537}') +
     '</div>' +
+  '</div>' +
+
+  // ---- 数据口径说明 ----
+  '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
+    '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
+    '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
+    '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
   '</div>' +
 
   // Department table (明细先于柱状图)
@@ -1003,29 +1002,32 @@ function renderDepartment(dept) {
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
-      cardStatusClass(schedRate, 'schedule'),
-      '已排班人数/总人数') +
+      cardStatusClass(schedRate, 'schedule')) +
     metricCard('\u2705 排班正确率', s['排班正确']['正确率'], '正确 ' + s['排班正确']['正确'] + ' / 不正确 ' + s['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
       cardStatusClass(correctRate, 'correct')) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch'),
-      '当天员工打卡次数总和/当天应出勤人员标准打卡总和') +
+      cardStatusClass(punchRate, 'punch')) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
       'status-ok') +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub'),
-      'HUB首打卡跟班次卡点差1h以内人数/HUB总人数') +
+      cardStatusClass(hubRate, 'hub')) +
     metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
       '上周加班工时: ' + fmtH(s['上周加班工时']),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-  '</div>';
+  '</div>' +
+
+  '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
+    '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
+    '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
+    '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
+  '</div>' +
 
   // 四级部门明细表 (放在柱状图前面)
   var subRows = dept.sub_depts.map(function(sub, j) {
@@ -1156,29 +1158,32 @@ function renderSubDepartment(dept, sub) {
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
-      cardStatusClass(schedRate, 'schedule'),
-      '已排班人数/总人数') +
+      cardStatusClass(schedRate, 'schedule')) +
     metricCard('\u2705 排班正确率', s['排班正确']['正确率'], '正确 ' + s['排班正确']['正确'] + ' / 不正确 ' + s['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
       cardStatusClass(correctRate, 'correct')) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch'),
-      '当天员工打卡次数总和/当天应出勤人员标准打卡总和') +
+      cardStatusClass(punchRate, 'punch')) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
       'status-ok') +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub'),
-      'HUB首打卡跟班次卡点差1h以内人数/HUB总人数') +
+      cardStatusClass(hubRate, 'hub')) +
     metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
       '上周加班工时: ' + fmtH(s['上周加班工时']),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-  '</div>';
+  '</div>' +
+
+  '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
+    '<div class="caliber-item"><strong>排班率</strong> = 已排班人数 / 总人数</div>' +
+    '<div class="caliber-item"><strong>打卡率</strong> = 当天员工打卡次数总和 / 当天应出勤人员标准打卡总和</div>' +
+    '<div class="caliber-item"><strong>HUB排班正确率</strong> = HUB首打卡跟班次卡点差1h以内人数 / HUB总人数</div>' +
+  '</div>' +
 
   // 完整指标表 (放在柱状图前面)
   html += '<div class="table-wrap"><h3>&#x1F4CA; ' + sub.name + ' - 完整指标</h3>' +
