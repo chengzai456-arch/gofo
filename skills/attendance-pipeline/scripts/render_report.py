@@ -592,6 +592,8 @@ function shareUrl() {
 })();
 
 // ========== Data ==========
+</script>
+<script>
 var DATA = __DATA_JSON__;
 
 // ========== Helpers ==========
@@ -1340,8 +1342,10 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ========== Initialize ==========
-renderSidebar();
-showView('overview');
+setTimeout(function() {
+  renderSidebar();
+  showView('overview');
+}, 10);
 </script>
 </body>
 </html>"""
