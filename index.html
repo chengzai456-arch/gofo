@@ -251,6 +251,22 @@
     // ══ 配置 — 部署时修改此处的后端地址 ══
     var SSO_BACKEND_URL = 'http://localhost:3000';
 
+    // ══ 从 URL 参数中提取并保存 token（跨域传递） ══
+    (function() {
+      var q = new URLSearchParams(window.location.search);
+      var token = q.get('token');
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify({
+          name: q.get('name') || '',
+          role: q.get('role') || '',
+          regions: (q.get('regions')||'').split(',').filter(Boolean)
+        }));
+        // 清除 URL 参数，防止 token 泄露
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    })();
+
     // ══ 状态切换 ══
     function showState(state) {
       ['login', 'loading', 'error'].forEach(function(s) {
