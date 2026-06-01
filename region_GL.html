@@ -662,8 +662,9 @@ function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
   var drillVal = employees ? drillData(valStr, '', employees) : valStr;
+  var drillIcon = employees ? ' \u{1F50D}' : '';
   return '<div class="card' + cardC + '">' +
-    '<div class="card-title">' + title + '</div>' +
+    '<div class="card-title">' + title + drillIcon + '</div>' +
     '<div class="card-value' + valC + '">' + drillVal + '</div>' +
     (desc ? '<div class="card-desc">' + desc + '</div>' : '') +
   '</div>';
