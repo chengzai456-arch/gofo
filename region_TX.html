@@ -871,7 +871,7 @@ function renderOverview() {
     '<div class="meta">日期: ' + DATA.meta.date_range + ' &nbsp;|&nbsp; 部门: ' + DATA.meta.department_count + '个 &nbsp;|&nbsp; 总人数: ' + o.total + '人</div>' +
   '</div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', o.total, '', '') +
+    metricCard('\uD83D\uDC65 总人数', o.total, '', '', null, o.all_employees) +
     metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', o['日超8H'].rate,
       o['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
@@ -1004,7 +1004,7 @@ function renderDepartment(dept) {
     '<h1>&#x1F3E2; ' + dept.name + '</h1>' +
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
+    metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
     metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
@@ -1167,7 +1167,7 @@ function renderSubDepartment(dept, sub) {
     '<h1>&#x1F4C3; ' + dept.name + ' / ' + sub.name + '</h1>' +
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
+    metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
     metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
