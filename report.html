@@ -662,7 +662,7 @@ function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
   var drillVal = employees ? drillData(valStr, '', employees) : valStr;
-  var drillIcon = employees ? ' \u{1F50D}' : '';
+  var drillIcon = employees ? ' <span style="font-size:10px;color:#9ca3af;font-weight:400">(可穿透)</span>' : '';
   return '<div class="card' + cardC + '">' +
     '<div class="card-title">' + title + drillIcon + '</div>' +
     '<div class="card-value' + valC + '">' + drillVal + '</div>' +
@@ -939,7 +939,7 @@ function renderOverview() {
     '<div class="table-wrap">' +
     '<h3>&#x1F4CA; 部门总览（点击部门名查看四级明细）</h3>' +
     '<table id="overview_table"><thead><tr>' +
-    '<th>部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>部门</th><th>人数 (可穿透)</th><th>日超8H合计 (可穿透)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可穿透)</th><th>打卡率</th><th>打卡数 (可穿透)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
     '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
 
   // ---- Bar Chart (放在明细表格下面) ----
@@ -1080,7 +1080,7 @@ function renderDepartment(dept) {
   html += renderSearchBar('dept') +
     '<div class="table-wrap"><h3>&#x1F4CA; 四级部门明细</h3>' +
     '<table id="dept_table"><thead><tr>' +
-    '<th>四级部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>四级部门</th><th>人数 (可穿透)</th><th>日超8H合计 (可穿透)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可穿透)</th><th>打卡率</th><th>打卡数 (可穿透)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
     '</tr></thead><tbody>' + subRows + '</tbody></table></div>';
 
   // 柱状图 (放在明细表格下面)
@@ -1329,4 +1329,4 @@ renderSidebar();
 showView('overview');
 </script>
 </body>
-</html> 
+</html>
