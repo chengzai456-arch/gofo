@@ -690,12 +690,13 @@ function infoBtn(label, employees) {
 }
 
 // ========== Card Component ==========
-function metricCard(title, valStr, desc, statusCls, cardCls) {
+function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
+  var drillVal = employees ? drillData(valStr, '', employees) : valStr;
   return '<div class="card' + cardC + '">' +
     '<div class="card-title">' + title + '</div>' +
-    '<div class="card-value' + valC + '">' + valStr + '</div>' +
+    '<div class="card-value' + valC + '">' + drillVal + '</div>' +
     (desc ? '<div class="card-desc">' + desc + '</div>' : '') +
   '</div>';
 }
@@ -904,7 +905,8 @@ function renderOverview() {
     metricCard('\uD83D\uDC65 总人数', o.total, '', '') +
     metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', o['日超8H'].rate,
       o['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
-      o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
+      o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
+      o['日超8H'].employees.length > 0 ? o['日超8H'].employees : null) +
     metricCard('\uD83D\uDCCB 排班率', o['排班']['排班率'],
       '已排班 ' + o['排班']['已排班'] + ' / 未排班 ' + o['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
@@ -912,19 +914,23 @@ function renderOverview() {
     metricCard('\u2705 排班正确率', o['排班正确']['正确率'],
       '正确 ' + o['排班正确']['正确'] + ' / 不正确 ' + o['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
-      cardStatusClass(correctRate, 'correct')) +
+      cardStatusClass(correctRate, 'correct'),
+      o['排班正确']['employees_不正确'].length > 0 ? o['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6\u6253\u5361\u6570 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch')) +
+      cardStatusClass(punchRate, 'punch'),
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
-      'status-ok') +
+      'status-ok',
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB排班正确率', o['HUB']['正确率'],
       'HUB总 ' + o['HUB'].total + '人 | 目标90% | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub')) +
+      cardStatusClass(hubRate, 'hub'),
+      o['HUB']['employees_不正确'].length > 0 ? o['HUB']['employees_不正确'] : null) +
     metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']),
       '\u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6: ' + fmtH(o['上周加班工时']),
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
@@ -1032,24 +1038,30 @@ function renderDepartment(dept) {
     metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
     metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
-      s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
+      s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
+      s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
-      cardStatusClass(schedRate, 'schedule')) +
+      cardStatusClass(schedRate, 'schedule'),
+      s['排班']['employees_未排班'].length > 0 ? s['排班']['employees_未排班'] : null) +
     metricCard('\u2705 排班正确率', s['排班正确']['正确率'], '正确 ' + s['排班正确']['正确'] + ' / 不正确 ' + s['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
-      cardStatusClass(correctRate, 'correct')) +
+      cardStatusClass(correctRate, 'correct'),
+      s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch')) +
+      cardStatusClass(punchRate, 'punch'),
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
-      'status-ok') +
+      'status-ok',
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub')) +
+      cardStatusClass(hubRate, 'hub'),
+      s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
     metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
       '上周加班工时: ' + fmtH(s['上周加班工时']),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
@@ -1189,24 +1201,30 @@ function renderSubDepartment(dept, sub) {
     metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
     metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
-      s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
+      s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
+      s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
       statusClass(schedRate, 'schedule'),
-      cardStatusClass(schedRate, 'schedule')) +
+      cardStatusClass(schedRate, 'schedule'),
+      s['排班']['employees_未排班'].length > 0 ? s['排班']['employees_未排班'] : null) +
     metricCard('\u2705 排班正确率', s['排班正确']['正确率'], '正确 ' + s['排班正确']['正确'] + ' / 不正确 ' + s['排班正确']['不正确'],
       statusClass(correctRate, 'correct'),
-      cardStatusClass(correctRate, 'correct')) +
+      cardStatusClass(correctRate, 'correct'),
+      s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
       '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
       statusClass(punchRate, 'punch'),
-      cardStatusClass(punchRate, 'punch')) +
+      cardStatusClass(punchRate, 'punch'),
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
       '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       '',
-      'status-ok') +
+      'status-ok',
+      punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
-      cardStatusClass(hubRate, 'hub')) +
+      cardStatusClass(hubRate, 'hub'),
+      s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
     metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
       '上周加班工时: ' + fmtH(s['上周加班工时']),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
