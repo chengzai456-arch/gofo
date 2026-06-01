@@ -191,35 +191,39 @@ td.text-bad   { background: #fee2e2; }
 .filter-bar {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
   padding: 14px 18px; margin-bottom: 16px;
-  background: rgba(15, 23, 42, 0.40); backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.10); border-radius: 12px;
+  background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;
 }
 .filter-bar input {
   flex: 1; min-width: 200px; padding: 8px 14px;
-  background: rgba(30, 41, 59, 0.50); border: 1px solid rgba(148, 163, 184, 0.15);
-  border-radius: 8px; color: #e2e8f0; font-size: 13px; outline: none;
+  background: #f9fafb; border: 1px solid #d1d5db;
+  border-radius: 8px; color: #1a1a2e; font-size: 13px; outline: none;
   transition: border-color 0.2s;
 }
-.filter-bar input:focus { border-color: rgba(59, 130, 246, 0.5); }
-.filter-bar input::placeholder { color: #64748b; }
+.filter-bar input:focus { border-color: #3b82f6; }
+.filter-bar input::placeholder { color: #9ca3af; }
 .filter-toggle {
   display: flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
   cursor: pointer; transition: all 0.2s; white-space: nowrap;
-  background: rgba(30, 41, 59, 0.40); border: 1px solid rgba(148, 163, 184, 0.12);
-  color: #94a3b8;
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  color: #6b7280;
 }
-.filter-toggle:hover { border-color: rgba(148, 163, 184, 0.3); color: #cbd5e1; }
-.filter-toggle.active { color: #e2e8f0; font-weight: 600; }
+.filter-toggle:hover { border-color: #9ca3af; color: #1a1a2e; }
+.filter-toggle.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600; }
 .filter-toggle .dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 .filter-clear {
   padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer;
-  background: rgba(239, 68, 68, 0.10); border: 1px solid rgba(239, 68, 68, 0.20);
-  color: #f87171; transition: all 0.2s;
+  background: #fef2f2; border: 1px solid #fecaca;
+  color: #dc2626; transition: all 0.2s;
 }
-.filter-clear:hover { background: rgba(239, 68, 68, 0.20); }
+.filter-clear:hover { background: #fee2e2; }
+
+/* Caliber section (employee drill cards) */
+.caliber-section { margin-bottom: 24px; }
+.caliber-section h3 { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 12px; }
+.caliber-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 
 /* ========== Chart Container ========== */
 .chart-wrap {
@@ -729,10 +733,10 @@ var activeMetricFilters = { schedule: true, correct: false, hub: false, punch: f
 function renderFilterBar(prefix) {
   return '<div class="filter-bar">' +
     '<input type="text" placeholder="搜索部门名称..." oninput="applyFilters(\'' + prefix + '\')" id="' + prefix + '_search">' +
-    '<span class="filter-toggle active" data-metric="schedule" onclick="toggleMetric(\'' + prefix + '\',\'schedule\',this)" style="border-color:rgba(34,197,94,0.3)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
-    '<span class="filter-toggle" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)" style="border-color:rgba(59,130,246,0.3)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
-    '<span class="filter-toggle" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)" style="border-color:rgba(139,92,246,0.3)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
-    '<span class="filter-toggle" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)" style="border-color:rgba(249,115,22,0.3)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
+    '<span class="filter-toggle active" data-metric="schedule" onclick="toggleMetric(\'' + prefix + '\',\'schedule\',this)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
+    '<span class="filter-toggle" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
+    '<span class="filter-toggle" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
+    '<span class="filter-toggle" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
     '<span class="filter-clear" onclick="clearFilters(\'' + prefix + '\')">重置</span>' +
   '</div>';
 }
@@ -858,7 +862,7 @@ function renderOverview() {
   '</div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', o.total, '', '') +
-    metricCard('\u23F0 日超8H合计', o['日超8H'].total_hours + 'h', o['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', o['日超8H'].rate,
       o['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
     metricCard('\uD83D\uDCCB 排班率', o['排班']['排班率'],
@@ -915,7 +919,7 @@ function renderOverview() {
     return '<tr>' +
       '<td><span class="expand-row" onclick="showView(\'' + dId + '\')">' + dept.name + '</span></td>' +
       '<td>' + drillData(s.total, '全员', s.all_employees) + '</td>' +
-      '<td>' + drillData(o8D.total_hours + 'h', '日超8H', o8D.employees) + '</td>' +
+      '<td>' + drillData(Math.round(o8D.total_hours) + 'h', '日超8H', o8D.employees) + '</td>' +
       '<td class="' + statusClass(p2n(s['排班']['排班率']), 'schedule') + '">' + s['排班']['排班率'] + '</td>' +
       '<td class="' + statusClass(p2n(s['排班正确']['正确率']), 'correct') + '">' + s['排班正确']['正确率'] + '</td>' +
       '<td>' + drillData(s['排班']['未排班'], '未排班', s['排班']['employees_未排班']) + '</td>' +
@@ -997,7 +1001,7 @@ function renderDepartment(dept) {
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
-    metricCard('\u23F0 日超8H合计', s['日超8H'].total_hours + 'h', s['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
@@ -1052,7 +1056,7 @@ function renderDepartment(dept) {
 
   subRows += '<tr class="summary"><td>&#x1F4CA; ' + dept.name + ' 汇总</td>' +
     '<td>' + s.total + '</td>' +
-    '<td>' + s['日超8H'].total_hours + 'h (' + s['日超8H'].rate + ')</td>' +
+    '<td>' + Math.round(s['日超8H'].total_hours) + 'h (' + s['日超8H'].rate + ')</td>' +
     '<td>' + s['排班']['排班率'] + '</td>' +
     '<td>' + s['排班正确']['正确率'] + '</td>' +
     '<td>' + s['排班']['未排班'] + '</td>' +
@@ -1153,7 +1157,7 @@ function renderSubDepartment(dept, sub) {
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
-    metricCard('\u23F0 日超8H合计', s['日超8H'].total_hours + 'h', s['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok') +
     metricCard('\uD83D\uDCCB 排班率', s['排班']['排班率'], '已排班 ' + s['排班']['已排班'] + ' / 未排班 ' + s['排班']['未排班'],
