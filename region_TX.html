@@ -152,7 +152,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 28px; font-weight: 800; margin-bottom: 6px;
   line-height: 1.1; color: #1a1a2e;
 }
-.card-desc { font-size: 12px; color: #9ca3af; font-weight: 500; }
+.card-desc { font-size: 12px; color: #374151; font-weight: 600; }
 
 /* Employee drill-down cards */
 .caliber-card {
@@ -927,10 +927,10 @@ function renderOverview() {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       o['HUB']['employees_不正确'].length > 0 ? o['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']),
-      '\u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6: ' + fmtH(o['上周加班工时']),
+    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), '',
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       o['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), '', '', '') +
   '</div>' +
 
   // ---- 数据口径说明 ----
@@ -1043,10 +1043,10 @@ function renderDepartment(dept) {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
-      '上周加班工时: ' + fmtH(s['上周加班工时']),
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), '',
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), '', '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
@@ -1182,10 +1182,10 @@ function renderSubDepartment(dept, sub) {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
-      '上周加班工时: ' + fmtH(s['上周加班工时']),
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), '',
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), '', '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
