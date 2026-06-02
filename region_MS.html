@@ -130,8 +130,8 @@ a { text-decoration: none; color: inherit; }
 /* ========== Cards Grid ========== */
 .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 16px;
   padding: 20px 22px;
   transition: all 0.25s; position: relative; overflow: hidden;
@@ -899,7 +899,7 @@ function renderOverview() {
   '</div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', o.total, '', '', null, o.all_employees) +
-    metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', o['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + o['日超8H'].rate,
       o['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       o['日超8H'].employees.length > 0 ? o['日超8H'].employees : null) +
@@ -1017,7 +1017,7 @@ function renderDepartment(dept) {
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
-    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
@@ -1156,7 +1156,7 @@ function renderSubDepartment(dept, sub) {
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
     metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
-    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
