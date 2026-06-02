@@ -549,6 +549,16 @@ var DATA = {"meta": {"total_employees": 180, "date_range": "2026/05/27", "depart
 // ========== Helpers ==========
 function p2n(pctStr) { return parseFloat(pctStr) / 100; }
 function fmtH(v) { v = parseFloat(v); return v > 0 ? v + 'h' : '-'; }
+function weekLabel(dateStr, weekOffset) {
+  // dateStr format: "2026/05/27", weekOffset: 0=本周, -7=上周
+  var parts = dateStr.split('/');
+  var d = new Date(parts[0], parts[1]-1, parts[2]);
+  var day = d.getDay(); // 0=Sun
+  var mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + weekOffset);
+  var sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  function fmt(dt) { return dt.getFullYear() + '/' + (dt.getMonth()+1) + '/' + dt.getDate(); }
+  return fmt(mon) + '-' + fmt(sat);
+}
 
 function statusClass(val, type) {
   var v = typeof val === 'number' ? val : p2n(val);
@@ -918,10 +928,10 @@ function renderOverview() {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       o['HUB']['employees_不正确'].length > 0 ? o['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), DATA.meta.date_range,
+    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       o['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
+    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   // ---- 数据口径说明 ----
@@ -1029,10 +1039,10 @@ function renderDepartment(dept) {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), DATA.meta.date_range,
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
@@ -1162,10 +1172,10 @@ function renderSubDepartment(dept, sub) {
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), DATA.meta.date_range,
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
