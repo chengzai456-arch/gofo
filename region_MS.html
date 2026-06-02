@@ -705,6 +705,30 @@ function drawBarChart(canvasId, config) {
   var ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+  var isLine = config.type === 'line';
+  var dataLabelPlugin = {
+    id: 'dataLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx2 = chart.ctx;
+      chart.data.datasets.forEach(function(ds, i) {
+        var meta = chart.getDatasetMeta(i);
+        if (!meta.hidden) {
+          meta.data.forEach(function(point, j) {
+            var v = ds.data[j];
+            if (v == null) return;
+            var label = String(v);
+            ctx2.font = 'bold 10px sans-serif';
+            ctx2.fillStyle = ds.borderColor || '#333';
+            ctx2.textAlign = 'center';
+            ctx2.textBaseline = 'bottom';
+            ctx2.fillText(label, point.x, point.y - 8);
+          });
+        }
+      });
+    }
+  };
+
   chartInstances[canvasId] = new Chart(ctx, {
     type: config.type || 'bar',
     data: config.data,
@@ -728,7 +752,8 @@ function drawBarChart(canvasId, config) {
           ticks: { font: { size: 11 }, color: '#6b7280', callback: function(v) { return v + '%'; } }
         }
       }
-    }
+    },
+    plugins: [dataLabelPlugin]
   });
 }
 
