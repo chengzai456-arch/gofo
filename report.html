@@ -791,9 +791,9 @@ function updateChartVisibility(prefix) {
     for (var i = 0; i < ds.length; i++) {
       var d = ds[i].label;
       if (d.indexOf('排班率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.schedule);
-      else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
       else if (d.indexOf('HUB') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.hub);
       else if (d.indexOf('打卡率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.punch);
+      else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
     }
     inst.update();
   });
