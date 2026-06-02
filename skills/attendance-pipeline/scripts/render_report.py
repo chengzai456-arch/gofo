@@ -77,22 +77,6 @@ a { text-decoration: none; color: inherit; }
   color: #fff;
   display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
-.sidebar-action {
-  padding: 10px 14px; display: flex; justify-content: center;
-  border-bottom: 1px solid #e5e7eb;
-}
-.back-home-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; padding: 8px 0; border-radius: 10px;
-  font-size: 12.5px; font-weight: 600; color: #3b82f6;
-  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.18);
-  cursor: pointer; transition: all 0.25s ease; text-decoration: none; white-space: nowrap;
-  letter-spacing: 0.5px;
-}
-.back-home-btn:hover {
-  background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.35);
-  color: #2563eb; transform: translateY(-1px);
-}
 .sidebar-nav { flex: 1; padding: 10px 0; }
 .nav-item {
   display: flex; align-items: center; padding: 10px 18px; cursor: pointer;
@@ -414,9 +398,6 @@ tr.summary td {
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="logo">&#x1F4CA;</div> 考勤分析
-  </div>
-  <div class="sidebar-action">
-    <a href="index.html" class="back-home-btn">&#x1F3E0; 返回数据面板</a>
   </div>
   <div class="sidebar-nav" id="sidebarNav">
     <div class="nav-item active"><span class="icon">&#x1F3E0;</span>加载中...</div>
