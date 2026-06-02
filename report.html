@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>考勤排班数据分析报告</title>
+<title>考勤管理数据分析报告</title>
 <style>
 /* ========== Font & Reset ========== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -128,7 +128,8 @@ a { text-decoration: none; color: inherit; }
 .page-header .meta { font-size: 13px; color: #6b7280; font-weight: 500; }
 
 /* ========== Cards Grid ========== */
-.cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+.cards-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.cards-grid .card { flex: 0 0 calc(50% - 8px); min-width: 220px; }
 .card {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
@@ -360,7 +361,7 @@ tr.summary td {
 @media (max-width: 900px) {
   .sidebar { width: 220px; min-width: 220px; }
   .main { margin-left: 220px; padding: 20px; }
-  .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cards-grid .card { flex: 0 0 calc(50% - 6px); min-width: 170px; }
   .floating-btn { top: 14px; right: 14px; padding: 8px 14px; font-size: 12px; }
   .fab-container { bottom: 16px; right: 16px; gap: 8px; }
   .fab-btn { padding: 8px 14px; font-size: 11.5px; }
@@ -769,8 +770,8 @@ function renderSearchBar(prefix) {
 function renderChartFilter(prefix) {
   return '<div class="filter-bar">' +
     '<span class="filter-toggle active" data-metric="schedule" onclick="toggleMetric(\'' + prefix + '\',\'schedule\',this)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
-    '<span class="filter-toggle active" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
-    '<span class="filter-toggle active" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
+    '<span class="filter-toggle active" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>排班正确率</span>' +
+    '<span class="filter-toggle active" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB排班正确率</span>' +
     '<span class="filter-toggle active" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
     '<span class="filter-clear" onclick="clearFilters(\'' + prefix + '\')">重置</span>' +
   '</div>';
@@ -818,6 +819,20 @@ function clearFilters(prefix) {
   });
   applyFilters(prefix);
   updateChartVisibility(prefix);
+}
+
+var sortAscending = false;
+function sortTable(tableId, colIdx) {
+  sortAscending = !sortAscending;
+  var tbody = document.querySelector('#' + tableId + ' tbody');
+  if (!tbody) return;
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort(function(a, b) {
+    var va = parseFloat(a.getAttribute('data-punch')) || 0;
+    var vb = parseFloat(b.getAttribute('data-punch')) || 0;
+    return sortAscending ? va - vb : vb - va;
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
 }
 
 // ========== Render Sidebar ==========
@@ -894,7 +909,7 @@ function renderOverview() {
   var resignRate = p2n(punchD['补签率']);
 
   var cards = '<div class="page-header">' +
-    '<h1>&#x1F4CA; 考勤排班数据分析报告</h1>' +
+    '<h1>&#x1F4CA; 考勤管理数据分析报告</h1>' +
     '<div class="meta">日期: ' + DATA.meta.date_range + ' &nbsp;|&nbsp; 部门: ' + DATA.meta.department_count + '个 &nbsp;|&nbsp; 总人数: ' + o.total + '人</div>' +
   '</div>' +
   '<div class="cards-grid">' +
@@ -913,24 +928,19 @@ function renderOverview() {
       cardStatusClass(correctRate, 'correct'),
       o['排班正确']['employees_不正确'].length > 0 ? o['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6\u6253\u5361\u6570 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB排班正确率', o['HUB']['正确率'],
       'HUB总 ' + o['HUB'].total + '人 | 目标90% | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       o['HUB']['employees_不正确'].length > 0 ? o['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), '',
+    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), DATA.meta.date_range,
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       o['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), '', '', '') +
+    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
   '</div>' +
 
   // ---- 数据口径说明 ----
@@ -946,19 +956,19 @@ function renderOverview() {
     var dId = 'dept-' + i;
     var pD = s['打卡率'];
     var o8D = s['日超8H'];
-    return '<tr>' +
+    var pdRate = p2n(pD['打卡率']);
+    return '<tr data-punch="' + pdRate + '">' +
       '<td><span class="expand-row" onclick="showView(\'' + dId + '\')">' + dept.name + '</span></td>' +
       '<td>' + drillData(s.total, '全员', s.all_employees) + '</td>' +
       '<td>' + drillData(Math.round(o8D.total_hours) + 'h', '日超8H', o8D.employees) + '</td>' +
-      '<td class="' + statusClass(p2n(s['排班']['排班率']), 'schedule') + '">' + s['排班']['排班率'] + '</td>' +
-      '<td class="' + statusClass(p2n(s['排班正确']['正确率']), 'correct') + '">' + s['排班正确']['正确率'] + '</td>' +
-      '<td>' + drillData(s['排班']['未排班'], '未排班', s['排班']['employees_未排班']) + '</td>' +
-      '<td class="' + statusClass(p2n(pD['打卡率']), 'punch') + '">' + pD['打卡率'] + '</td>' +
-      '<td>' + drillData(pD['打卡数'], '打卡明细', pD.employees) + '</td>' +
+      '<td class="' + statusClass(pdRate, 'punch') + '">' + pD['打卡率'] + '</td>' +
       '<td class="' + statusClass(p2n(pD['补签率']), 'resign') + '">' + pD['补签率'] + '</td>' +
-      '<td class="' + statusClass(p2n(s['HUB']['正确率']), 'hub') + '">' + s['HUB']['正确率'] + (p2n(s['HUB']['正确率']) < 0.9 ? ' \u26A0' : '') + '</td>' +
       '<td>' + fmtH(s['本周加班工时']) + '</td>' +
       '<td>' + fmtH(s['上周加班工时']) + '</td>' +
+      '<td>' + drillData(s['排班']['未排班'], '未排班', s['排班']['employees_未排班']) + '</td>' +
+      '<td class="' + statusClass(p2n(s['排班']['排班率']), 'schedule') + '">' + s['排班']['排班率'] + '</td>' +
+      '<td class="' + statusClass(p2n(s['排班正确']['正确率']), 'correct') + '">' + s['排班正确']['正确率'] + '</td>' +
+      '<td class="' + statusClass(p2n(s['HUB']['正确率']), 'hub') + '">' + s['HUB']['正确率'] + (p2n(s['HUB']['正确率']) < 0.9 ? ' \u26A0' : '') + '</td>' +
     '</tr>';
   }).join('');
 
@@ -966,7 +976,7 @@ function renderOverview() {
     '<div class="table-wrap">' +
     '<h3>&#x1F4CA; 部门总览（点击部门名查看四级明细）</h3>' +
     '<table id="overview_table"><thead><tr>' +
-    '<th>部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可查看明细)</th><th>打卡率</th><th>打卡数 (可查看明细)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th onclick="sortTable(\'overview_table\',3)" style="cursor:pointer" title="点击排序">打卡率 ⇅</th><th>补签率</th><th>本周加班(h)</th><th>上周加班(h)</th><th>未排班数 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>HUB正确率</th>' +
     '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
 
   // ---- Bar Chart (放在明细表格下面) ----
@@ -1030,23 +1040,18 @@ function renderDepartment(dept) {
       cardStatusClass(correctRate, 'correct'),
       s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), '',
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), DATA.meta.date_range,
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), '', '', '') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
@@ -1060,39 +1065,38 @@ function renderDepartment(dept) {
     var ss = sub.summary;
     var mD = ss['打卡率'];
     var o8D = ss['日超8H'];
-    return '<tr>' +
+    var pdRate = p2n(mD['打卡率']);
+    return '<tr data-punch="' + pdRate + '">' +
       '<td>' + sub.name + '</td>' +
       '<td>' + drillData(ss.total, dept.name + '-' + sub.name + ' 全员', ss.all_employees) + '</td>' +
       '<td>' + drillData(o8D.total_hours + 'h', dept.name + '-' + sub.name + ' 日超8H', o8D.employees) + '</td>' +
-      '<td class="' + statusClass(p2n(ss['排班']['排班率']), 'schedule') + '">' + ss['排班']['排班率'] + '</td>' +
-      '<td class="' + statusClass(p2n(ss['排班正确']['正确率']), 'correct') + '">' + ss['排班正确']['正确率'] + '</td>' +
-      '<td>' + drillData(ss['排班']['未排班'], dept.name + '-' + sub.name + ' 未排班', ss['排班']['employees_未排班']) + '</td>' +
-      '<td class="' + statusClass(p2n(mD['打卡率']), 'punch') + '">' + mD['打卡率'] + '</td>' +
-      '<td>' + drillData(mD['打卡数'], dept.name + '-' + sub.name + ' 打卡明细', mD.employees) + '</td>' +
+      '<td class="' + statusClass(pdRate, 'punch') + '">' + mD['打卡率'] + '</td>' +
       '<td class="' + statusClass(p2n(mD['补签率']), 'resign') + '">' + mD['补签率'] + '</td>' +
-      '<td class="' + statusClass(p2n(ss['HUB']['正确率']), 'hub') + '">' + ss['HUB']['正确率'] + '</td>' +
       '<td>' + fmtH(ss['本周加班工时']) + '</td>' +
       '<td>' + fmtH(ss['上周加班工时']) + '</td>' +
+      '<td>' + drillData(ss['排班']['未排班'], dept.name + '-' + sub.name + ' 未排班', ss['排班']['employees_未排班']) + '</td>' +
+      '<td class="' + statusClass(p2n(ss['排班']['排班率']), 'schedule') + '">' + ss['排班']['排班率'] + '</td>' +
+      '<td class="' + statusClass(p2n(ss['排班正确']['正确率']), 'correct') + '">' + ss['排班正确']['正确率'] + '</td>' +
+      '<td class="' + statusClass(p2n(ss['HUB']['正确率']), 'hub') + '">' + ss['HUB']['正确率'] + '</td>' +
     '</tr>';
   }).join('');
 
   subRows += '<tr class="summary"><td>&#x1F4CA; ' + dept.name + ' 汇总</td>' +
     '<td>' + s.total + '</td>' +
     '<td>' + Math.round(s['日超8H'].total_hours) + 'h (' + s['日超8H'].rate + ')</td>' +
+    '<td>' + punchD['打卡率'] + '</td>' +
+    '<td>' + punchD['补签率'] + '</td>' +
+    '<td>' + fmtH(s['本周加班工时']) + '</td>' +
+    '<td>' + fmtH(s['上周加班工时']) + '</td>' +
+    '<td>' + s['排班']['未排班'] + '</td>' +
     '<td>' + s['排班']['排班率'] + '</td>' +
     '<td>' + s['排班正确']['正确率'] + '</td>' +
-    '<td>' + s['排班']['未排班'] + '</td>' +
-    '<td>' + punchD['打卡率'] + '</td>' +
-    '<td>' + punchD['打卡数'] + '</td>' +
-    '<td>' + punchD['补签率'] + '</td>' +
-    '<td>' + s['HUB']['正确率'] + '</td>' +
-    '<td>' + fmtH(s['本周加班工时']) + '</td>' +
-    '<td>' + fmtH(s['上周加班工时']) + '</td></tr>';
+    '<td>' + s['HUB']['正确率'] + '</td></tr>';
 
   html += renderSearchBar('dept') +
     '<div class="table-wrap"><h3>&#x1F4CA; 四级部门明细</h3>' +
     '<table id="dept_table"><thead><tr>' +
-    '<th>四级部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可查看明细)</th><th>打卡率</th><th>打卡数 (可查看明细)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>四级部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th onclick="sortTable(\'dept_table\',3)" style="cursor:pointer" title="点击排序">打卡率 ⇅</th><th>补签率</th><th>本周加班(h)</th><th>上周加班(h)</th><th>未排班数 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>HUB正确率</th>' +
     '</tr></thead><tbody>' + subRows + '</tbody></table></div>';
 
   // 柱状图 (放在明细表格下面)
@@ -1169,23 +1173,18 @@ function renderSubDepartment(dept, sub) {
       cardStatusClass(correctRate, 'correct'),
       s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), '',
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), DATA.meta.date_range,
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
-    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), '', '', '') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), DATA.meta.date_range.replace(/\/.*/, '') + ' 上周', '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
