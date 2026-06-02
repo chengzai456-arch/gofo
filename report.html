@@ -264,6 +264,8 @@ tr.summary td {
 }
 .drill-link { color: #3b82f6; cursor: pointer; font-weight: 600; transition: color 0.2s; }
 .drill-link:hover { color: #2563eb; text-decoration: underline; }
+.drill-data { cursor: pointer; font-weight: 600; border-bottom: 1px dashed #93c5fd; transition: transform 0.2s; display: inline-block; }
+.drill-data:hover { transform: scale(1.12); }
 .expand-row { cursor: pointer; color: #3b82f6; font-weight: 600; transition: color 0.2s; }
 .expand-row:hover { color: #2563eb; text-decoration: underline; }
 
@@ -662,7 +664,7 @@ function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
   var drillVal = employees ? drillData(valStr, '', employees) : valStr;
-  var drillIcon = employees ? ' <span style="font-size:10px;color:#9ca3af;font-weight:400">(可穿透)</span>' : '';
+  var drillIcon = employees ? ' <span style="font-size:10px;color:#9ca3af;font-weight:400">(可查看明细)</span>' : '';
   return '<div class="card' + cardC + '">' +
     '<div class="card-title">' + title + drillIcon + '</div>' +
     '<div class="card-value' + valC + '">' + drillVal + '</div>' +
@@ -939,7 +941,7 @@ function renderOverview() {
     '<div class="table-wrap">' +
     '<h3>&#x1F4CA; 部门总览（点击部门名查看四级明细）</h3>' +
     '<table id="overview_table"><thead><tr>' +
-    '<th>部门</th><th>人数 (可穿透)</th><th>日超8H合计 (可穿透)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可穿透)</th><th>打卡率</th><th>打卡数 (可穿透)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>未排班数 (可查看明细)</th><th>打卡率</th><th>打卡数 (可查看明细)</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
     '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
 
   // ---- Bar Chart (放在明细表格下面) ----
@@ -951,9 +953,7 @@ function renderOverview() {
   var punchData = topDepts.map(function(d) { return parseFloat(d.summary['打卡率']['打卡率']); });
 
   var chartHtml = renderChartFilter('overview') +
-    '<div class="chart-wrap"><h3>&#x1F4CA; 部门KPI对比（前12部门）</h3>' +
-    '<div style="position:relative; height:380px;"><canvas id="overviewChart"></canvas></div></div>' +
-    '<div class="chart-wrap"><h3>&#x1F4C8; 部门KPI趋势（前12部门）</h3>' +
+    '<div class="chart-wrap"><h3>&#x1F4C8; 部门指标趋势（前12部门）</h3>' +
     '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>';
 
   // 顺序: cards → table → charts
@@ -967,19 +967,6 @@ function renderOverview() {
   ];
 
   setTimeout(function() {
-    drawBarChart('overviewChart', {
-      data: {
-        labels: barLabels,
-        datasets: [
-          { label: '排班率', data: scheduleData, backgroundColor: chartColors.green, borderRadius: 4, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1 },
-          { label: '排班正确率', data: correctData, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 },
-          { label: 'HUB正确率', data: hubData, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1 },
-          { label: '打卡率', data: punchData, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1 },
-        ]
-      },
-      legend: true,
-      yMax: 105
-    });
     drawBarChart('overviewLineChart', {
       type: 'line',
       data: { labels: barLabels, datasets: lineDs },
@@ -1092,9 +1079,9 @@ function renderDepartment(dept) {
     var subPunch = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['打卡率']['打卡率']); });
 
     html += renderChartFilter('dept') +
-    '<div class="chart-wrap"><h3>&#x1F4CA; 四级部门KPI对比</h3>' +
+    '<div class="chart-wrap"><h3>&#x1F4CA; 四级部门指标对比</h3>' +
       '<div style="position:relative; height:350px;"><canvas id="deptChart"></canvas></div></div>' +
-      '<div class="chart-wrap"><h3>&#x1F4C8; 四级部门KPI趋势</h3>' +
+      '<div class="chart-wrap"><h3>&#x1F4C8; 四级部门指标趋势</h3>' +
       '<div style="position:relative; height:350px;"><canvas id="deptLineChart"></canvas></div></div>';
 
     html += '<script class="chart-config" data-id="deptChart">' +
@@ -1329,4 +1316,4 @@ renderSidebar();
 showView('overview');
 </script>
 </body>
-</html> 
+</html>
