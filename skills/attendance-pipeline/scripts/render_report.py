@@ -35,7 +35,7 @@ html_template = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>考勤排班数据分析报告</title>
+<title>考勤管理数据分析报告</title>
 <style>
 /* ========== Font & Reset ========== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -76,22 +76,6 @@ a { text-decoration: none; color: inherit; }
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: #fff;
   display: flex; align-items: center; justify-content: center; font-size: 16px;
-}
-.sidebar-action {
-  padding: 10px 14px; display: flex; justify-content: center;
-  border-bottom: 1px solid #e5e7eb;
-}
-.back-home-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%; padding: 8px 0; border-radius: 10px;
-  font-size: 12.5px; font-weight: 600; color: #3b82f6;
-  background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.18);
-  cursor: pointer; transition: all 0.25s ease; text-decoration: none; white-space: nowrap;
-  letter-spacing: 0.5px;
-}
-.back-home-btn:hover {
-  background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.35);
-  color: #2563eb; transform: translateY(-1px);
 }
 .sidebar-nav { flex: 1; padding: 10px 0; }
 .nav-item {
@@ -160,10 +144,11 @@ a { text-decoration: none; color: inherit; }
 .page-header .meta { font-size: 13px; color: #6b7280; font-weight: 500; }
 
 /* ========== Cards Grid ========== */
-.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.cards-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.cards-grid .card { flex: 0 0 calc(50% - 8px); min-width: 220px; }
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
   border-radius: 16px;
   padding: 20px 22px;
   transition: all 0.25s; position: relative; overflow: hidden;
@@ -184,7 +169,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 28px; font-weight: 800; margin-bottom: 6px;
   line-height: 1.1; color: #1a1a2e;
 }
-.card-desc { font-size: 12px; color: #9ca3af; font-weight: 500; }
+.card-desc { font-size: 12px; color: #374151; font-weight: 600; }
 
 /* Employee drill-down cards */
 .caliber-card {
@@ -296,6 +281,8 @@ tr.summary td {
 }
 .drill-link { color: #3b82f6; cursor: pointer; font-weight: 600; transition: color 0.2s; }
 .drill-link:hover { color: #2563eb; text-decoration: underline; }
+.drill-data { cursor: pointer; font-weight: 600; border-bottom: 1px dashed #93c5fd; transition: transform 0.2s; display: inline-block; }
+.drill-data:hover { transform: scale(1.12); }
 .expand-row { cursor: pointer; color: #3b82f6; font-weight: 600; transition: color 0.2s; }
 .expand-row:hover { color: #2563eb; text-decoration: underline; }
 
@@ -390,7 +377,7 @@ tr.summary td {
 @media (max-width: 900px) {
   .sidebar { width: 220px; min-width: 220px; }
   .main { margin-left: 220px; padding: 20px; }
-  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .cards-grid .card { flex: 0 0 calc(50% - 6px); min-width: 170px; }
   .floating-btn { top: 14px; right: 14px; padding: 8px 14px; font-size: 12px; }
   .fab-container { bottom: 16px; right: 16px; gap: 8px; }
   .fab-btn { padding: 8px 14px; font-size: 11.5px; }
@@ -411,9 +398,6 @@ tr.summary td {
 <div class="sidebar">
   <div class="sidebar-header">
     <div class="logo">&#x1F4CA;</div> 考勤分析
-  </div>
-  <div class="sidebar-action">
-    <a href="index.html" class="back-home-btn">&#x1F3E0; 返回数据面板</a>
   </div>
   <div class="sidebar-nav" id="sidebarNav">
     <div class="nav-item active"><span class="icon">&#x1F3E0;</span>加载中...</div>
@@ -597,6 +581,16 @@ var DATA = __DATA_JSON__;
 // ========== Helpers ==========
 function p2n(pctStr) { return parseFloat(pctStr) / 100; }
 function fmtH(v) { v = parseFloat(v); return v > 0 ? v + 'h' : '-'; }
+function weekLabel(dateStr, weekOffset) {
+  // dateStr format: "2026/05/27", weekOffset: 0=本周, -7=上周
+  var parts = dateStr.split('/');
+  var d = new Date(parts[0], parts[1]-1, parts[2]);
+  var day = d.getDay(); // 0=Sun
+  var mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + weekOffset);
+  var sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  function fmt(dt) { return dt.getFullYear() + '/' + (dt.getMonth()+1) + '/' + dt.getDate(); }
+  return fmt(mon) + '-' + fmt(sat);
+}
 
 function statusClass(val, type) {
   var v = typeof val === 'number' ? val : p2n(val);
@@ -694,8 +688,9 @@ function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
   var drillVal = employees ? drillData(valStr, '', employees) : valStr;
+  var drillIcon = employees ? ' <span style="font-size:10px;color:#9ca3af;font-weight:400">(可查看明细)</span>' : '';
   return '<div class="card' + cardC + '">' +
-    '<div class="card-title">' + title + '</div>' +
+    '<div class="card-title">' + title + drillIcon + '</div>' +
     '<div class="card-value' + valC + '">' + drillVal + '</div>' +
     (desc ? '<div class="card-desc">' + desc + '</div>' : '') +
   '</div>';
@@ -734,6 +729,30 @@ function drawBarChart(canvasId, config) {
   var ctx = document.getElementById(canvasId);
   if (!ctx) return;
   if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+  var isLine = config.type === 'line';
+  var dataLabelPlugin = {
+    id: 'dataLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx2 = chart.ctx;
+      chart.data.datasets.forEach(function(ds, i) {
+        var meta = chart.getDatasetMeta(i);
+        if (!meta.hidden) {
+          meta.data.forEach(function(point, j) {
+            var v = ds.data[j];
+            if (v == null) return;
+            var label = String(v);
+            ctx2.font = 'bold 10px sans-serif';
+            ctx2.fillStyle = ds.borderColor || '#333';
+            ctx2.textAlign = 'center';
+            ctx2.textBaseline = 'bottom';
+            ctx2.fillText(label, point.x, point.y - 8);
+          });
+        }
+      });
+    }
+  };
+
   chartInstances[canvasId] = new Chart(ctx, {
     type: config.type || 'bar',
     data: config.data,
@@ -757,7 +776,8 @@ function drawBarChart(canvasId, config) {
           ticks: { font: { size: 11 }, color: '#6b7280', callback: function(v) { return v + '%'; } }
         }
       }
-    }
+    },
+    plugins: [dataLabelPlugin]
   });
 }
 
@@ -773,8 +793,8 @@ function renderSearchBar(prefix) {
 function renderChartFilter(prefix) {
   return '<div class="filter-bar">' +
     '<span class="filter-toggle active" data-metric="schedule" onclick="toggleMetric(\'' + prefix + '\',\'schedule\',this)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
-    '<span class="filter-toggle active" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
-    '<span class="filter-toggle active" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB</span>' +
+    '<span class="filter-toggle active" data-metric="correct" onclick="toggleMetric(\'' + prefix + '\',\'correct\',this)"><span class="dot" style="background:#3b82f6"></span>排班正确率</span>' +
+    '<span class="filter-toggle active" data-metric="hub" onclick="toggleMetric(\'' + prefix + '\',\'hub\',this)"><span class="dot" style="background:#8b5cf6"></span>HUB排班正确率</span>' +
     '<span class="filter-toggle active" data-metric="punch" onclick="toggleMetric(\'' + prefix + '\',\'punch\',this)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
     '<span class="filter-clear" onclick="clearFilters(\'' + prefix + '\')">重置</span>' +
   '</div>';
@@ -795,9 +815,9 @@ function updateChartVisibility(prefix) {
     for (var i = 0; i < ds.length; i++) {
       var d = ds[i].label;
       if (d.indexOf('排班率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.schedule);
-      else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
       else if (d.indexOf('HUB') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.hub);
       else if (d.indexOf('打卡率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.punch);
+      else if (d.indexOf('正确率') !== -1) inst.setDatasetVisibility(i, activeMetricFilters.correct);
     }
     inst.update();
   });
@@ -822,6 +842,20 @@ function clearFilters(prefix) {
   });
   applyFilters(prefix);
   updateChartVisibility(prefix);
+}
+
+var sortAscending = false;
+function sortTable(tableId, colIdx) {
+  sortAscending = !sortAscending;
+  var tbody = document.querySelector('#' + tableId + ' tbody');
+  if (!tbody) return;
+  var rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort(function(a, b) {
+    var va = parseFloat(a.getAttribute('data-punch')) || 0;
+    var vb = parseFloat(b.getAttribute('data-punch')) || 0;
+    return sortAscending ? va - vb : vb - va;
+  });
+  rows.forEach(function(r) { tbody.appendChild(r); });
 }
 
 // ========== Render Sidebar ==========
@@ -898,12 +932,12 @@ function renderOverview() {
   var resignRate = p2n(punchD['补签率']);
 
   var cards = '<div class="page-header">' +
-    '<h1>&#x1F4CA; 考勤排班数据分析报告</h1>' +
+    '<h1>&#x1F4CA; 考勤管理数据分析报告</h1>' +
     '<div class="meta">日期: ' + DATA.meta.date_range + ' &nbsp;|&nbsp; 部门: ' + DATA.meta.department_count + '个 &nbsp;|&nbsp; 总人数: ' + o.total + '人</div>' +
   '</div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', o.total, '', '') +
-    metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', o['日超8H'].rate,
+    metricCard('\uD83D\uDC65 总人数', o.total, '', '', null, o.all_employees) +
+    metricCard('\u23F0 日超8H合计', Math.round(o['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + o['日超8H'].rate,
       o['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       o['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       o['日超8H'].employees.length > 0 ? o['日超8H'].employees : null) +
@@ -917,24 +951,19 @@ function renderOverview() {
       cardStatusClass(correctRate, 'correct'),
       o['排班正确']['employees_不正确'].length > 0 ? o['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6\u6253\u5361\u6570 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB排班正确率', o['HUB']['正确率'],
       'HUB总 ' + o['HUB'].total + '人 | 目标90% | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       o['HUB']['employees_不正确'].length > 0 ? o['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']),
-      '\u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6: ' + fmtH(o['上周加班工时']),
+    metricCard('\uD83D\uDCC5 \u672C\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       o['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       o['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 \u4E0A\u5468\u52A0\u73ED\u5DE5\u65F6', fmtH(o['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   // ---- 数据口径说明 ----
@@ -950,19 +979,19 @@ function renderOverview() {
     var dId = 'dept-' + i;
     var pD = s['打卡率'];
     var o8D = s['日超8H'];
-    return '<tr>' +
+    var pdRate = p2n(pD['打卡率']);
+    return '<tr data-punch="' + pdRate + '">' +
       '<td><span class="expand-row" onclick="showView(\'' + dId + '\')">' + dept.name + '</span></td>' +
       '<td>' + drillData(s.total, '全员', s.all_employees) + '</td>' +
       '<td>' + drillData(Math.round(o8D.total_hours) + 'h', '日超8H', o8D.employees) + '</td>' +
-      '<td class="' + statusClass(p2n(s['排班']['排班率']), 'schedule') + '">' + s['排班']['排班率'] + '</td>' +
-      '<td class="' + statusClass(p2n(s['排班正确']['正确率']), 'correct') + '">' + s['排班正确']['正确率'] + '</td>' +
-      '<td>' + drillData(s['排班']['未排班'], '未排班', s['排班']['employees_未排班']) + '</td>' +
-      '<td class="' + statusClass(p2n(pD['打卡率']), 'punch') + '">' + pD['打卡率'] + '</td>' +
-      '<td>' + drillData(pD['打卡数'], '打卡明细', pD.employees) + '</td>' +
+      '<td class="' + statusClass(pdRate, 'punch') + '">' + pD['打卡率'] + '</td>' +
       '<td class="' + statusClass(p2n(pD['补签率']), 'resign') + '">' + pD['补签率'] + '</td>' +
-      '<td class="' + statusClass(p2n(s['HUB']['正确率']), 'hub') + '">' + s['HUB']['正确率'] + (p2n(s['HUB']['正确率']) < 0.9 ? ' \u26A0' : '') + '</td>' +
       '<td>' + fmtH(s['本周加班工时']) + '</td>' +
       '<td>' + fmtH(s['上周加班工时']) + '</td>' +
+      '<td>' + drillData(s['排班']['未排班'], '未排班', s['排班']['employees_未排班']) + '</td>' +
+      '<td class="' + statusClass(p2n(s['排班']['排班率']), 'schedule') + '">' + s['排班']['排班率'] + '</td>' +
+      '<td class="' + statusClass(p2n(s['排班正确']['正确率']), 'correct') + '">' + s['排班正确']['正确率'] + '</td>' +
+      '<td class="' + statusClass(p2n(s['HUB']['正确率']), 'hub') + '">' + s['HUB']['正确率'] + (p2n(s['HUB']['正确率']) < 0.9 ? ' \u26A0' : '') + '</td>' +
     '</tr>';
   }).join('');
 
@@ -970,7 +999,7 @@ function renderOverview() {
     '<div class="table-wrap">' +
     '<h3>&#x1F4CA; 部门总览（点击部门名查看四级明细）</h3>' +
     '<table id="overview_table"><thead><tr>' +
-    '<th>部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th onclick="sortTable(\'overview_table\',3)" style="cursor:pointer" title="点击排序">打卡率 ⇅</th><th>补签率</th><th>本周加班(h)</th><th>上周加班(h)</th><th>未排班数 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>HUB正确率</th>' +
     '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
 
   // ---- Bar Chart (放在明细表格下面) ----
@@ -982,9 +1011,7 @@ function renderOverview() {
   var punchData = topDepts.map(function(d) { return parseFloat(d.summary['打卡率']['打卡率']); });
 
   var chartHtml = renderChartFilter('overview') +
-    '<div class="chart-wrap"><h3>&#x1F4CA; 部门KPI对比（前12部门）</h3>' +
-    '<div style="position:relative; height:380px;"><canvas id="overviewChart"></canvas></div></div>' +
-    '<div class="chart-wrap"><h3>&#x1F4C8; 部门KPI趋势（前12部门）</h3>' +
+    '<div class="chart-wrap"><h3>&#x1F4C8; 部门指标趋势（前12部门）</h3>' +
     '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>';
 
   // 顺序: cards → table → charts
@@ -998,19 +1025,6 @@ function renderOverview() {
   ];
 
   setTimeout(function() {
-    drawBarChart('overviewChart', {
-      data: {
-        labels: barLabels,
-        datasets: [
-          { label: '排班率', data: scheduleData, backgroundColor: chartColors.green, borderRadius: 4, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1 },
-          { label: '排班正确率', data: correctData, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 },
-          { label: 'HUB正确率', data: hubData, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1 },
-          { label: '打卡率', data: punchData, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1 },
-        ]
-      },
-      legend: true,
-      yMax: 105
-    });
     drawBarChart('overviewLineChart', {
       type: 'line',
       data: { labels: barLabels, datasets: lineDs },
@@ -1035,8 +1049,8 @@ function renderDepartment(dept) {
     '<h1>&#x1F3E2; ' + dept.name + '</h1>' +
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
-    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
+    metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
@@ -1049,23 +1063,18 @@ function renderDepartment(dept) {
       cardStatusClass(correctRate, 'correct'),
       s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
-      '上周加班工时: ' + fmtH(s['上周加班工时']),
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
@@ -1079,39 +1088,38 @@ function renderDepartment(dept) {
     var ss = sub.summary;
     var mD = ss['打卡率'];
     var o8D = ss['日超8H'];
-    return '<tr>' +
+    var pdRate = p2n(mD['打卡率']);
+    return '<tr data-punch="' + pdRate + '">' +
       '<td>' + sub.name + '</td>' +
       '<td>' + drillData(ss.total, dept.name + '-' + sub.name + ' 全员', ss.all_employees) + '</td>' +
       '<td>' + drillData(o8D.total_hours + 'h', dept.name + '-' + sub.name + ' 日超8H', o8D.employees) + '</td>' +
-      '<td class="' + statusClass(p2n(ss['排班']['排班率']), 'schedule') + '">' + ss['排班']['排班率'] + '</td>' +
-      '<td class="' + statusClass(p2n(ss['排班正确']['正确率']), 'correct') + '">' + ss['排班正确']['正确率'] + '</td>' +
-      '<td>' + drillData(ss['排班']['未排班'], dept.name + '-' + sub.name + ' 未排班', ss['排班']['employees_未排班']) + '</td>' +
-      '<td class="' + statusClass(p2n(mD['打卡率']), 'punch') + '">' + mD['打卡率'] + '</td>' +
-      '<td>' + drillData(mD['打卡数'], dept.name + '-' + sub.name + ' 打卡明细', mD.employees) + '</td>' +
+      '<td class="' + statusClass(pdRate, 'punch') + '">' + mD['打卡率'] + '</td>' +
       '<td class="' + statusClass(p2n(mD['补签率']), 'resign') + '">' + mD['补签率'] + '</td>' +
-      '<td class="' + statusClass(p2n(ss['HUB']['正确率']), 'hub') + '">' + ss['HUB']['正确率'] + '</td>' +
       '<td>' + fmtH(ss['本周加班工时']) + '</td>' +
       '<td>' + fmtH(ss['上周加班工时']) + '</td>' +
+      '<td>' + drillData(ss['排班']['未排班'], dept.name + '-' + sub.name + ' 未排班', ss['排班']['employees_未排班']) + '</td>' +
+      '<td class="' + statusClass(p2n(ss['排班']['排班率']), 'schedule') + '">' + ss['排班']['排班率'] + '</td>' +
+      '<td class="' + statusClass(p2n(ss['排班正确']['正确率']), 'correct') + '">' + ss['排班正确']['正确率'] + '</td>' +
+      '<td class="' + statusClass(p2n(ss['HUB']['正确率']), 'hub') + '">' + ss['HUB']['正确率'] + '</td>' +
     '</tr>';
   }).join('');
 
   subRows += '<tr class="summary"><td>&#x1F4CA; ' + dept.name + ' 汇总</td>' +
     '<td>' + s.total + '</td>' +
     '<td>' + Math.round(s['日超8H'].total_hours) + 'h (' + s['日超8H'].rate + ')</td>' +
+    '<td>' + punchD['打卡率'] + '</td>' +
+    '<td>' + punchD['补签率'] + '</td>' +
+    '<td>' + fmtH(s['本周加班工时']) + '</td>' +
+    '<td>' + fmtH(s['上周加班工时']) + '</td>' +
+    '<td>' + s['排班']['未排班'] + '</td>' +
     '<td>' + s['排班']['排班率'] + '</td>' +
     '<td>' + s['排班正确']['正确率'] + '</td>' +
-    '<td>' + s['排班']['未排班'] + '</td>' +
-    '<td>' + punchD['打卡率'] + '</td>' +
-    '<td>' + punchD['打卡数'] + '</td>' +
-    '<td>' + punchD['补签率'] + '</td>' +
-    '<td>' + s['HUB']['正确率'] + '</td>' +
-    '<td>' + fmtH(s['本周加班工时']) + '</td>' +
-    '<td>' + fmtH(s['上周加班工时']) + '</td></tr>';
+    '<td>' + s['HUB']['正确率'] + '</td></tr>';
 
   html += renderSearchBar('dept') +
     '<div class="table-wrap"><h3>&#x1F4CA; 四级部门明细</h3>' +
     '<table id="dept_table"><thead><tr>' +
-    '<th>四级部门</th><th>人数 &#x1F50D;</th><th>日超8H合计 &#x1F50D;</th><th>排班率</th><th>排班正确率</th><th>未排班数 &#x1F50D;</th><th>打卡率</th><th>打卡数 &#x1F50D;</th><th>补签率</th><th>HUB正确率</th><th>本周加班(h)</th><th>上周加班(h)</th>' +
+    '<th>四级部门</th><th>人数 (可查看明细)</th><th>日超8H合计 (可查看明细)</th><th onclick="sortTable(\'dept_table\',3)" style="cursor:pointer" title="点击排序">打卡率 ⇅</th><th>补签率</th><th>本周加班(h)</th><th>上周加班(h)</th><th>未排班数 (可查看明细)</th><th>排班率</th><th>排班正确率</th><th>HUB正确率</th>' +
     '</tr></thead><tbody>' + subRows + '</tbody></table></div>';
 
   // 柱状图 (放在明细表格下面)
@@ -1123,19 +1131,8 @@ function renderDepartment(dept) {
     var subPunch = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['打卡率']['打卡率']); });
 
     html += renderChartFilter('dept') +
-    '<div class="chart-wrap"><h3>&#x1F4CA; 四级部门KPI对比</h3>' +
-      '<div style="position:relative; height:350px;"><canvas id="deptChart"></canvas></div></div>' +
-      '<div class="chart-wrap"><h3>&#x1F4C8; 四级部门KPI趋势</h3>' +
+    '<div class="chart-wrap"><h3>&#x1F4C8; 四级部门指标趋势</h3>' +
       '<div style="position:relative; height:350px;"><canvas id="deptLineChart"></canvas></div></div>';
-
-    html += '<script class="chart-config" data-id="deptChart">' +
-      JSON.stringify({
-        labels: subLabels,
-        schedule: subSched,
-        correct: subCorrect,
-        hub: subHub,
-        punch: subPunch
-      }) + '</' + 'script>';
 
     html += '<script class="chart-config" data-id="deptLineChart">' +
       JSON.stringify({
@@ -1151,22 +1148,9 @@ function renderDepartment(dept) {
   main.innerHTML = html;
 
   setTimeout(function() {
-    var configEl = document.querySelector('.chart-config[data-id="deptChart"]');
+    var configEl = document.querySelector('.chart-config[data-id="deptLineChart"]');
     if (!configEl) return;
     var cfg = JSON.parse(configEl.textContent);
-    drawBarChart('deptChart', {
-      data: {
-        labels: cfg.labels,
-        datasets: [
-          { label: '排班率', data: cfg.schedule, backgroundColor: chartColors.green, borderRadius: 4, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1 },
-          { label: '排班正确率', data: cfg.correct, backgroundColor: chartColors.blue, borderRadius: 4, borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1 },
-          { label: 'HUB正确率', data: cfg.hub, backgroundColor: chartColors.purple, borderRadius: 4, borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1 },
-          { label: '打卡率', data: cfg.punch, backgroundColor: chartColors.orange, borderRadius: 4, borderColor: 'rgba(249,115,22,0.4)', borderWidth: 1 },
-        ]
-      },
-      legend: true,
-      yMax: 105
-    });
     drawBarChart('deptLineChart', {
       type: 'line',
       data: {
@@ -1198,8 +1182,8 @@ function renderSubDepartment(dept, sub) {
     '<h1>&#x1F4C3; ' + dept.name + ' / ' + sub.name + '</h1>' +
     '<div class="meta">总人数: ' + s.total + '人 | 日期: ' + DATA.meta.date_range + '</div></div>' +
   '<div class="cards-grid">' +
-    metricCard('\uD83D\uDC65 总人数', s.total, '', '') +
-    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', s['日超8H'].rate,
+    metricCard('\uD83D\uDC65 总人数', s.total, '', '', null, s.all_employees) +
+    metricCard('\u23F0 日超8H合计', Math.round(s['日超8H'].total_hours) + 'h', '\u8D85\u6807\u7387 ' + s['日超8H'].rate,
       s['日超8H'].total_hours > 0 ? 'text-warn' : 'text-ok',
       s['日超8H'].total_hours > 0 ? 'status-warn' : 'status-ok',
       s['日超8H'].employees.length > 0 ? s['日超8H'].employees : null) +
@@ -1212,23 +1196,18 @@ function renderSubDepartment(dept, sub) {
       cardStatusClass(correctRate, 'correct'),
       s['排班正确']['employees_不正确'].length > 0 ? s['排班正确']['employees_不正确'] : null) +
     metricCard('\u2705 \u6253\u5361\u7387', punchD['打卡率'] + '',
-      '\u6253\u5361\u6570 ' + punchD['打卡数'] + ' / \u6807\u51C6 ' + punchD['标准打卡数'],
+      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
       statusClass(punchRate, 'punch'),
       cardStatusClass(punchRate, 'punch'),
-      punchD.employees.length > 0 ? punchD.employees : null) +
-    metricCard('\uD83D\uDCCA \u6253\u5361\u6570', punchD['打卡数'] + '',
-      '\u8865\u7B7E\u7387 ' + punchD['补签率'],
-      '',
-      'status-ok',
       punchD.employees.length > 0 ? punchD.employees : null) +
     metricCard('\uD83D\uDD37 HUB正确率', s['HUB']['正确率'], 'HUB ' + s['HUB'].total + '人 | ' + (hubRate >= 0.9 ? '\u2705达标' : '\u26A0未达标'),
       statusClass(hubRate, 'hub'),
       cardStatusClass(hubRate, 'hub'),
       s['HUB']['employees_不正确'].length > 0 ? s['HUB']['employees_不正确'] : null) +
-    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']),
-      '上周加班工时: ' + fmtH(s['上周加班工时']),
+    metricCard('\uD83D\uDCC5 本周加班工时', fmtH(s['本周加班工时']), weekLabel(DATA.meta.date_range, 0),
       s['本周加班工时'] > 0 ? 'text-warn' : 'text-ok',
       s['本周加班工时'] > 0 ? 'status-warn' : 'status-ok') +
+    metricCard('\uD83D\uDCC5 上周加班工时', fmtH(s['上周加班工时']), weekLabel(DATA.meta.date_range, -7), '', '') +
   '</div>' +
 
   '<div class="data-caliber"><h4>\u{1F4CA} 数据口径说明</h4>' +
@@ -1393,254 +1372,19 @@ for dept in data['departments']:
         region_json = json.dumps(region_data, ensure_ascii=True)
         region_html = html_template.replace('__DATA_JSON__', region_json)
         region_html = region_html.replace('__FEISHU_URL__', FEISHU_URL)
-        region_html = region_html.replace('<title>考勤排班数据分析报告</title>', '<title>考勤分析 - ' + dept["name"] + '</title>')
+        region_html = region_html.replace('<title>考勤管理数据分析报告</title>', '<title>考勤分析 - ' + dept["name"] + '</title>')
         region_filename = os.path.join(WORKSPACE, '考勤分析_' + dept["name"] + '.html')
         with open(region_filename, 'w', encoding='utf-8') as f:
             f.write(region_html)
         print("大区报告生成: " + region_filename)
 
 # ============================================================
-# 生成考勤首页 (v1) — 仅关键KPI + 查看全览入口
+# 首页改为直接使用全览报告
 # ============================================================
-TOTAL_REPORT = "report.html"
-REGION_MAIN = ['FL 佛州大区', 'TX 德州大区', 'GL 大湖大区', 'WE 美西大区', 'MS 中南大区', 'NE 东北大区', 'Ground项目部']
-REGION_URLS = {
-    'FL 佛州大区': 'region_FL.html',
-    'TX 德州大区': 'region_TX.html',
-    'GL 大湖大区': 'region_GL.html',
-    'WE 美西大区': 'region_WE.html',
-    'MS 中南大区': 'region_MS.html',
-    'NE 东北大区': 'region_NE.html',
-    'Ground项目部': 'region_Ground.html',
-}
-
-o = data['overview']
-overview = {
-    'total': o['total'],
-    'date': data['meta']['date_range'],
-    'dept_count': data['meta']['department_count'],
-    'day8h_rate': o['日超8H']['rate'],
-    'sched_rate': o['排班']['排班率'],
-    'correct_rate': o['排班正确']['正确率'],
-    'punch_rate': o['打卡率']['打卡率'],
-}
-
-regions = []
-for d in data['departments']:
-    if d['name'] in REGION_MAIN:
-        s = d['summary']
-        regions.append({
-            'name': d['name'],
-            'total': s['total'],
-            'day8h': s['日超8H']['rate'],
-            'sched': s['排班']['排班率'],
-            'correct': s['排班正确']['正确率'],
-            'punch': s['打卡率']['打卡率'],
-            'url': REGION_URLS.get(d['name'], '#'),
-        })
-
-homepage_json = json.dumps({'overview': overview, 'regions': regions}, ensure_ascii=True)
-
-homepage_html = r'''<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>考勤数据看板</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: #ffffff;
-  color: #1a1a2e;
-  min-height: 100vh; overflow-x: hidden;
-  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-}
-
-/* ===== Content Layer ===== */
-.content {
-  position: relative; z-index: 1;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 40px 24px;
-  gap: 28px;
-}
-
-/* ===== Hero Section ===== */
-.hero {
-  text-align: center; max-width: 700px;
-}
-.hero .badge {
-  display: inline-block; padding: 5px 16px; border-radius: 50px;
-  background: rgba(59,130,246,0.10); border: 1px solid rgba(59,130,246,0.20);
-  font-size: 11.5px; font-weight: 600; color: #3b82f6;
-  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
-}
-.hero h1 {
-  font-size: 36px; font-weight: 900; color: #1a1a2e;
-  letter-spacing: -1px; line-height: 1.2; margin-bottom: 10px;
-}
-.hero h1 span { background: linear-gradient(135deg, #3b82f6, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hero .date {
-  font-size: 13px; color: #6b7280; font-weight: 500; margin-top: 6px;
-}
-
-/* ===== KPI Cards ===== */
-.kpi-grid {
-  display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
-}
-.kpi-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb; border-radius: 16px;
-  padding: 22px 28px; min-width: 160px; text-align: center;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06); position: relative; overflow: hidden;
-  transition: all 0.3s ease;
-}
-.kpi-card:hover {
-  transform: translateY(-3px);
-  border-color: #d1d5db;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-}
-.kpi-card .kpi-icon { font-size: 22px; margin-bottom: 8px; }
-.kpi-card .kpi-value {
-  font-size: 30px; font-weight: 900; line-height: 1.1; color: #1a1a2e; margin-bottom: 4px;
-}
-.kpi-card .kpi-label {
-  font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
-}
-.kpi-card .kpi-sub {
-  font-size: 11px; color: #9ca3af; margin-top: 2px; font-weight: 500;
-}
-.kpi-card.status-ok    { border-bottom: 3px solid #22c55e; }
-.kpi-card.status-warn  { border-bottom: 3px solid #eab308; }
-.kpi-card.status-bad   { border-bottom: 3px solid #ef4444; }
-
-/* ===== CTA Button ===== */
-.cta-btn {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 16px 40px; border-radius: 50px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  border: 1px solid #3b82f6;
-  color: #ffffff; font-size: 16px; font-weight: 700;
-  text-decoration: none; letter-spacing: -0.2px;
-  cursor: pointer; transition: all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(59,130,246,0.2);
-}
-.cta-btn:hover {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  border-color: #2563eb;
-  color: #fff;
-  box-shadow: 0 4px 24px rgba(59,130,246,0.35);
-  transform: translateY(-2px);
-}
-.cta-btn .cta-arrow {
-  transition: transform 0.3s; font-size: 20px;
-}
-.cta-btn:hover .cta-arrow { transform: translateX(4px); }
-
-/* ===== Region Cards ===== */
-.region-section { text-align: center; max-width: 900px; }
-.region-section h2 {
-  font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;
-  font-weight: 600; margin-bottom: 14px;
-}
-.region-grid {
-  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
-}
-.region-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb; border-radius: 14px;
-  padding: 14px 18px; min-width: 130px; text-align: center;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.06); transition: all 0.25s;
-}
-.region-card:hover {
-  transform: translateY(-2px); border-color: #d1d5db;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-}
-.region-card .r-name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
-.region-card .r-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: center; font-size: 11px; color: #6b7280; }
-.region-card .r-stats span { white-space: nowrap; }
-.region-card .r-stats .ok { background: #dcfce7; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
-.region-card .r-stats .warn { background: #fef9c3; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
-.region-card .r-stats .bad { background: #fee2e2; color: #1a1a2e; font-weight: 600; border-radius: 3px; padding: 1px 6px; }
-
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .hero h1 { font-size: 26px; }
-  .kpi-grid { gap: 10px; }
-  .kpi-card { padding: 16px 20px; min-width: 130px; }
-  .kpi-card .kpi-value { font-size: 24px; }
-}
-</style>
-</head>
-<body>
-
-<div class="content">
-
-<div class="content">
-  <div class="hero">
-    <div class="badge">Attendance Dashboard</div>
-    <h1>考勤<span>数据看板</span></h1>
-    <div class="date" id="pageDate"></div>
-  </div>
-
-  <div class="kpi-grid" id="kpiGrid"></div>
-
-  <a class="cta-btn" href="__TOTAL_REPORT__">
-    <span>查看全览</span><span class="cta-arrow">&rarr;</span>
-  </a>
-
-  <div class="region-section">
-    <h2>各大区概览</h2>
-    <div class="region-grid" id="regionGrid"></div>
-  </div>
-</div>
-
-<script>
-var DATA = __HOMEPAGE_DATA__;
-
-// Page date
-document.getElementById('pageDate').textContent = '数据日期: ' + DATA.overview.date + ' | ' + DATA.overview.total + '人 | ' + DATA.overview.dept_count + '个部门';
-
-// ===== Render KPI Cards =====
-(function() {
-  var ov = DATA.overview;
-  function statusCls(value, type) {
-    var n = parseFloat(value);
-    if (type === 'punch' || type === 'sched') return n >= 100 ? 'status-ok' : (n >= 90 ? 'status-warn' : 'status-bad');
-    if (type === 'correct') return n >= 90 ? 'status-ok' : (n >= 50 ? 'status-warn' : 'status-bad');
-    return 'status-ok';
-  }
-  var cards = [
-    { icon: '\u{1F465}', value: ov.total, label: '\u603B\u4EBA\u6570', sub: ov.dept_count+'\u4E2A\u90E8\u95E8', cls: '' },
-    { icon: '\u23F0', value: ov.day8h_rate, label: '\u65E5\u8D858\u5C0F\u65F6', sub: '\u8D85\u6807\u7387', cls: 'status-warn' },
-    { icon: '\u{1F4CB}', value: ov.sched_rate, label: '\u6392\u73ED\u7387', sub: '\u5DF2\u6392\u73ED', cls: statusCls(ov.sched_rate, 'sched') },
-    { icon: '\u2705', value: ov.correct_rate, label: '\u6392\u73ED\u6B63\u786E\u7387', sub: '\u6B63\u786E\u5360\u6BD4', cls: statusCls(ov.correct_rate, 'correct') },
-    { icon: '\u2705', value: ov.punch_rate, label: '\u6253\u5361\u7387', sub: '\u6253\u5361\u5360\u6BD4', cls: statusCls(ov.punch_rate, 'punch') },
-  ];
-  document.getElementById('kpiGrid').innerHTML = cards.map(function(c) {
-    return '<div class="kpi-card ' + c.cls + '"><div class="kpi-icon">' + c.icon + '</div><div class="kpi-value">' + c.value + '</div><div class="kpi-label">' + c.label + '</div><div class="kpi-sub">' + c.sub + '</div></div>';
-  }).join('');
-
-  // Regions
-  function sc(val, type) {
-    var n = parseFloat(val);
-    if (type === 'sched' || type === 'punch') return n >= 100 ? 'ok' : (n >= 90 ? 'warn' : 'bad');
-    if (type === 'correct') return n >= 90 ? 'ok' : (n >= 50 ? 'warn' : 'bad');
-    return 'ok';
-  }
-  document.getElementById('regionGrid').innerHTML = DATA.regions.map(function(r) {
-    return '<div class="region-card" onclick="window.location.href=\'' + r.url + '\'" style="cursor:pointer"><div class="r-name">' + r.name.replace(/ .*$/, '') + '</div><div class="r-stats"><span>' + r.total + '\u4EBA</span><span class="' + sc(r.sched,'sched') + '">\u6392\u73ED\u7387 ' + r.sched + '</span><span class="' + sc(r.correct,'correct') + '">\u6B63\u786E\u7387 ' + r.correct + '</span><span class="' + sc(r.punch,'punch') + '">\u6253\u5361\u7387 ' + r.punch + '</span></div></div>';
-  }).join('');
-})();
-</script>
-</body>
-</html>'''
-
-with open(HOMEPAGE_FILE, 'w', encoding='utf-8') as f:
-    f.write(homepage_html.replace('__HOMEPAGE_DATA__', homepage_json).replace('__TOTAL_REPORT__', TOTAL_REPORT))
-
-print("首页已生成: " + HOMEPAGE_FILE)
-print("首页文件大小: " + str(round(os.path.getsize(HOMEPAGE_FILE) / 1024, 1)) + " KB")
+import shutil
+idx_file = os.path.join(WORKSPACE, "index.html")
+report_html = os.path.join(WORKSPACE, "考勤分析报告.html")
+shutil.copy(report_html, idx_file)
+print("index.html 已同步为全览报告")
 
 print("完成!")
