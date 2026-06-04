@@ -818,8 +818,77 @@ function applyFilters(prefix) {
   });
 }
 
-function clearFilters(prefix) {
+// ========== 7日趋势图 ==========
+var trendChartInstance = null;
 
+function renderTrendChart(deptKey) {
+  if (!window.TREND_DATA || !TREND_DATA.dates || TREND_DATA.dates.length < 1) return '';
+
+  var trend = TREND_DATA.overview;
+  var title = '\u{1F4C8} \u5168\u516C\u53F8 7\u65E5\u8D8B\u52BF';
+  if (deptKey) {
+    if (deptKey.indexOf('|') > 0) {
+      trend = TREND_DATA.sub_departments[deptKey] || {};
+      title = '\u{1F4C8} ' + deptKey.split('|')[1] + ' 7\u65E5\u8D8B\u52BF';
+    } else {
+      trend = TREND_DATA.departments[deptKey] || {};
+      title = '\u{1F4C8} ' + deptKey + ' 7\u65E5\u8D8B\u52BF';
+    }
+  }
+
+  var dates = TREND_DATA.dates;
+  var schedData = [], correctData = [], punchData = [];
+  dates.forEach(function(d) {
+    var t = trend[d] || {};
+    schedData.push(t['排班率'] != null ? t['排班率'] : null);
+    correctData.push(t['正确率'] != null ? t['正确率'] : null);
+    punchData.push(t['打卡率'] != null ? t['打卡率'] : null);
+  });
+
+  var html = '<div class="chart-wrap"><h3>' + title + '</h3>' +
+    '<div class="filter-bar">' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,0)">' +
+    '<span class="dot" style="background:#22c55e"></span>排班率</span>' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,1)">' +
+    '<span class="dot" style="background:#3b82f6"></span>正确率</span>' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,2)">' +
+    '<span class="dot" style="background:#f97316"></span>打卡率</span>' +
+    '</div>' +
+    '<div style="position:relative;height:300px"><canvas id="trendChart"></canvas></div></div>';
+
+  setTimeout(function() {
+    if (trendChartInstance) trendChartInstance.destroy();
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    trendChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: '排班率', data: schedData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true },
+          { label: '正确率', data: correctData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true },
+          { label: '打卡率', data: punchData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, color: '#94a3b8' } } },
+        scales: { y: { min: 0, max: 105, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } }, x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } } }
+      }
+    });
+  }, 300);
+
+  return html;
+}
+
+function toggleTrendMetric(el, idx) {
+  el.classList.toggle('active');
+  if (!trendChartInstance) return;
+  trendChartInstance.setDatasetVisibility(idx, el.classList.contains('active'));
+  trendChartInstance.update();
+}
+
+function clearFilters(prefix) {
 // ========== 7日趋势图渲染 ==========
 // (trend chart moved to separate injection)
   var inp = document.getElementById(prefix + '_search');
@@ -1005,8 +1074,8 @@ function renderOverview() {
     '<div class="chart-wrap"><h3>&#x1F4C8; 部门指标趋势（前12部门）</h3>' +
     '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>';
 
-  // 顺序: cards → table → charts
-  main.innerHTML = cards + table + chartHtml;
+  // 顺序: cards → table → charts → trend
+  main.innerHTML = cards + table + chartHtml + renderTrendChart(null);
 
   var lineDs = [
     { label: '排班率', data: scheduleData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#22c55e' },
@@ -1138,8 +1207,8 @@ function renderDepartment(dept) {
       }) + '</div>';
   }
 
-  // 顺序: cards → table → chart
-  main.innerHTML = html;
+  // 顺序: cards → table → chart → trend
+  main.innerHTML = html + renderTrendChart(dept.name);
 
   setTimeout(function() {
     var configEl = document.querySelector('.chart-config[data-id="deptLineChart"]');
@@ -1281,8 +1350,8 @@ function renderSubDepartment(dept, sub) {
       '<div style="position:relative; height:300px;"><canvas id="subChart"></canvas></div></div>';
   }
 
-  // 顺序: cards → table → L5 data → chart
-  main.innerHTML = html;
+  // 顺序: cards → table → L5 data → chart → trend
+  main.innerHTML = html + renderTrendChart(dept.name + '|' + sub.name);
 
   setTimeout(function() {
     // 四级部门对比趋势图
@@ -1410,5 +1479,6 @@ document.addEventListener('keydown', function(e) {
 renderSidebar();
 showView('overview');
 </script>
+__TREND_SCRIPT__
 </body>
 </html>
