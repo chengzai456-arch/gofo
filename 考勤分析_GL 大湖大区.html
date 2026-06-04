@@ -793,7 +793,7 @@ function toggleMetric(prefix, metric, el) {
 }
 
 function updateChartVisibility(prefix) {
-  var names = [prefix + 'Chart', prefix + 'LineChart'];
+  var names = [prefix + 'Chart', prefix + 'LineChart', prefix + 'TrendChart'];
   names.forEach(function(name) {
     var inst = chartInstances[name];
     if (!inst) return;
@@ -1256,6 +1256,11 @@ function renderSubDepartment(dept, sub) {
       '<th>五级部门</th><th>人数</th><th>日超8H</th><th>打卡率</th><th>排班率</th><th>正确率</th><th>未排班</th><th>HUB正确率</th>' +
       '</tr></thead><tbody>' + l5Rows + '</tbody></table></div>';
 
+    // 同级四级部门对比趋势图
+    html += renderChartFilter('subDept') +
+      '<div class="chart-wrap"><h3>&#x1F4C8; ' + dept.name + ' - 四级部门指标对比</h3>' +
+      '<div style="position:relative; height:350px;"><canvas id="subDeptLineChart"></canvas></div></div>';
+
     // L5 趋势图
     var l5Labels = l5.map(function(ld) { return ld.name.length > 10 ? ld.name.substring(0,10)+'..' : ld.name; });
     var l5Sched = l5.map(function(ld) { return parseFloat(ld.summary['排班']['排班率']); });
@@ -1277,6 +1282,27 @@ function renderSubDepartment(dept, sub) {
   main.innerHTML = html;
 
   setTimeout(function() {
+    // 四级部门对比趋势图
+    var subDeptLabels = dept.sub_depts.map(function(sd) { return sd.name.length > 10 ? sd.name.substring(0,10)+'..' : sd.name; });
+    var subSched = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['排班']['排班率']); });
+    var subCorrect = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['排班正确']['正确率']); });
+    var subHub = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['HUB']['正确率']); });
+    var subPunch = dept.sub_depts.map(function(sd) { return parseFloat(sd.summary['打卡率']['打卡率']); });
+    drawBarChart('subDeptLineChart', {
+      type: 'line',
+      data: {
+        labels: subDeptLabels,
+        datasets: [
+          { label: '排班率', data: subSched, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#22c55e' },
+          { label: '排班正确率', data: subCorrect, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#3b82f6' },
+          { label: 'HUB正确率', data: subHub, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#8b5cf6' },
+          { label: '打卡率', data: subPunch, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#f97316' },
+        ]
+      },
+      legend: true,
+      yMax: 105
+    });
+
     if (l5 && l5.length > 0) {
       // L5 trend chart
       drawBarChart('l5LineChart', {
