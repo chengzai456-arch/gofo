@@ -822,9 +822,6 @@ function clearFilters(prefix) {
 
 // ========== 7日趋势图渲染 ==========
 // (trend chart moved to separate injection)
-  trendChartInstance.setDatasetVisibility(idx, visible);
-  trendChartInstance.update();
-}
   var inp = document.getElementById(prefix + '_search');
   if (inp) inp.value = '';
   activeMetricFilters = { schedule: true, correct: true, hub: true, punch: true };
