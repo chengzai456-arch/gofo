@@ -819,7 +819,7 @@ function applyFilters(prefix) {
 }
 
 // ========== 7日趋势图 ==========
-var trendChartInstance = null;
+// (trend chart uses drawBarChart, instance in chartInstances['trendChart'])
 var trendMode = 0; // 0=single-dept(3metrics), 1=overview(1metric×7regions)
 var trendRegionDs = {}; // dataset index -> region name
 
@@ -876,10 +876,7 @@ function renderTrendChart(deptKey) {
     '<div style="position:relative;height:300px"><canvas id="trendChart"></canvas></div></div>';
 
   setTimeout(function() {
-    if (trendChartInstance) trendChartInstance.destroy();
-    var ctx = document.getElementById('trendChart');
-    if (!ctx) return;
-    trendChartInstance = new Chart(ctx, {
+    drawBarChart('trendChart', {
       type: 'line',
       data: {
         labels: dates,
@@ -889,11 +886,8 @@ function renderTrendChart(deptKey) {
           { label: '打卡率', data: punchData, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.10)', borderWidth: 2, tension: 0.3, pointRadius: 3, spanGaps: true }
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, color: '#94a3b8' } } },
-        scales: { y: { min: 0, max: 105, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } }, x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } } }
-      }
+      legend: true,
+      yMax: 105
     });
   }, 300);
 
@@ -901,9 +895,6 @@ function renderTrendChart(deptKey) {
 }
 
 function drawTrendOverview(dates, metricKey, regions, colors) {
-  if (trendChartInstance) trendChartInstance.destroy();
-  var ctx = document.getElementById('trendChart');
-  if (!ctx) return;
   var datasets = [];
   regions.forEach(function(r, i) {
     var deptData = TREND_DATA.departments[r] || {};
@@ -919,22 +910,17 @@ function drawTrendOverview(dates, metricKey, regions, colors) {
       borderWidth: 2, tension: 0.3, pointRadius: 2, spanGaps: true
     });
   });
-  trendChartInstance = new Chart(ctx, {
+  drawBarChart('trendChart', {
     type: 'line',
     data: { labels: dates, datasets: datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, color: '#94a3b8' } } },
-      scales: { y: { min: 0, max: 105, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } }, x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } } }
-    }
+    legend: true,
+    yMax: 105
   });
 }
 
 function switchTrendMetric(el, metricKey) {
-  // highlight selected metric button
   el.parentNode.querySelectorAll('.filter-toggle').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
-  // redraw overview with new metric
   var regions = ['FL 佛州大区','TX 德州大区','GL 大湖大区','WE 美西大区','MS 中南大区','NE 东北大区','Ground项目部'];
   var colors  = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
   var dates = TREND_DATA.dates;
@@ -943,16 +929,18 @@ function switchTrendMetric(el, metricKey) {
 
 function toggleTrendRegion(el, idx) {
   el.classList.toggle('active');
-  if (!trendChartInstance || trendMode !== 1) return;
-  trendChartInstance.setDatasetVisibility(idx, el.classList.contains('active'));
-  trendChartInstance.update();
+  var inst = chartInstances['trendChart'];
+  if (!inst || trendMode !== 1) return;
+  inst.setDatasetVisibility(idx, el.classList.contains('active'));
+  inst.update();
 }
 
 function toggleTrendMetric(el, idx) {
   el.classList.toggle('active');
-  if (!trendChartInstance || trendMode !== 0) return;
-  trendChartInstance.setDatasetVisibility(idx, el.classList.contains('active'));
-  trendChartInstance.update();
+  var inst = chartInstances['trendChart'];
+  if (!inst || trendMode !== 0) return;
+  inst.setDatasetVisibility(idx, el.classList.contains('active'));
+  inst.update();
 }
 
 function clearFilters(prefix) {
