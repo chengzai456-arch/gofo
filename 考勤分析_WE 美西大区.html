@@ -201,17 +201,20 @@ td.text-bad   { background: #fee2e2; }
   display: flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500;
   cursor: pointer; transition: all 0.2s; white-space: nowrap;
-  background: #f9fafb; border: 1px solid #e5e7eb;
-  color: #6b7280;
+  background: rgba(30,41,59,0.50); border: 1px solid rgba(148,163,184,0.20);
+  color: #94a3b8;
 }
-.filter-toggle:hover { border-color: #9ca3af; color: #1a1a2e; }
-.filter-toggle.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600; }
+.filter-toggle:hover { border-color: #64748b; color: #e2e8f0; }
+.filter-toggle.active { background: rgba(59,130,246,0.15); border-color: #3b82f6; color: #60a5fa; font-weight: 600; }
 .filter-toggle .dot {
   width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
 }
 .filter-clear {
   padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer;
-  background: #fef2f2; border: 1px solid #fecaca;
+  background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171; margin-left: 6px;
+}
+.filter-clear:hover { background: rgba(239,68,68,0.20); }
   color: #dc2626; transition: all 0.2s;
 }
 .filter-clear:hover { background: #fee2e2; }
@@ -1260,12 +1263,14 @@ function renderSubDepartment(dept, sub) {
     var l5Hub = l5.map(function(ld) { return parseFloat(ld.summary['HUB']['正确率']); });
     var l5Punch = l5.map(function(ld) { return parseFloat(ld.summary['打卡率']['打卡率']); });
 
-    html += '<div class="chart-wrap"><h3>&#x1F4C8; ' + sub.name + ' - 五级部门指标趋势</h3>' +
-      '<div style="position:relative; height:350px;"><canvas id="subDeptL5Chart"></canvas></div></div>';
+    html += renderChartFilter('l5') +
+      '<div class="chart-wrap"><h3>&#x1F4C8; ' + sub.name + ' - 五级部门指标趋势</h3>' +
+      '<div style="position:relative; height:350px;"><canvas id="l5LineChart"></canvas></div></div>';
   } else {
-    // 无L5数据时显示简单柱状图
-    html += '<div class="chart-wrap"><h3>&#x1F4CA; ' + sub.name + ' - 指标总览</h3>' +
-      '<div style="position:relative; height:280px;"><canvas id="subDeptChart"></canvas></div></div>';
+    // 无L5数据时显示指标趋势图 + 筛选按钮
+    html += renderChartFilter('sub') +
+      '<div class="chart-wrap"><h3>&#x1F4CA; ' + sub.name + ' - 指标趋势</h3>' +
+      '<div style="position:relative; height:300px;"><canvas id="subChart"></canvas></div></div>';
   }
 
   // 顺序: cards → table → L5 data → chart
@@ -1274,7 +1279,7 @@ function renderSubDepartment(dept, sub) {
   setTimeout(function() {
     if (l5 && l5.length > 0) {
       // L5 trend chart
-      drawBarChart('subDeptL5Chart', {
+      drawBarChart('l5LineChart', {
         type: 'line',
         data: {
           labels: l5Labels,
@@ -1293,24 +1298,17 @@ function renderSubDepartment(dept, sub) {
       var correctVal = parseFloat(s['排班正确']['正确率']);
       var hubVal = parseFloat(s['HUB']['正确率']);
       var punchVal = parseFloat(s['打卡率']['打卡率']);
-      drawBarChart('subDeptChart', {
+      drawBarChart('subChart', {
         data: {
-          labels: ['排班率', '排班正确率', 'HUB正确率', '打卡率'],
-          datasets: [{
-            label: sub.name,
-            data: [schedVal, correctVal, hubVal, punchVal],
-            backgroundColor: [
-              schedVal >= 100 ? chartColors.green : schedVal >= 90 ? chartColors.yellow : chartColors.red,
-              correctVal >= 90 ? chartColors.green : correctVal >= 50 ? chartColors.yellow : chartColors.red,
-              hubVal >= 90 ? chartColors.green : hubVal >= 50 ? chartColors.yellow : chartColors.red,
-              punchVal >= 90 ? chartColors.green : punchVal >= 50 ? chartColors.yellow : chartColors.red,
-            ],
-            borderRadius: 6,
-            borderColor: 'rgba(0,0,0,0.08)',
-            borderWidth: 1,
-          }]
+          labels: [sub.name],
+          datasets: [
+            { label: '排班率', data: [schedVal], backgroundColor: schedVal >= 100 ? chartColors.green : schedVal >= 90 ? chartColors.yellow : chartColors.red, borderColor: '#22c55e', borderWidth: 2, borderRadius: 6 },
+            { label: '排班正确率', data: [correctVal], backgroundColor: correctVal >= 90 ? chartColors.green : correctVal >= 50 ? chartColors.yellow : chartColors.red, borderColor: '#3b82f6', borderWidth: 2, borderRadius: 6 },
+            { label: 'HUB正确率', data: [hubVal], backgroundColor: hubVal >= 90 ? chartColors.green : hubVal >= 50 ? chartColors.yellow : chartColors.red, borderColor: '#8b5cf6', borderWidth: 2, borderRadius: 6 },
+            { label: '打卡率', data: [punchVal], backgroundColor: punchVal >= 90 ? chartColors.green : punchVal >= 50 ? chartColors.yellow : chartColors.red, borderColor: '#f97316', borderWidth: 2, borderRadius: 6 },
+          ]
         },
-        legend: false,
+        legend: true,
         yMax: 105
       });
     }
