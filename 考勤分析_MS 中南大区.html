@@ -820,23 +820,45 @@ function applyFilters(prefix) {
 
 // ========== 7日趋势图 ==========
 var trendChartInstance = null;
+var trendMode = 0; // 0=single-dept(3metrics), 1=overview(1metric×7regions)
+var trendRegionDs = {}; // dataset index -> region name
 
 function renderTrendChart(deptKey) {
   if (!window.TREND_DATA || !TREND_DATA.dates || TREND_DATA.dates.length < 1) return '';
+  var dates = TREND_DATA.dates;
 
-  var trend = TREND_DATA.overview;
-  var title = '\u{1F4C8} \u5168\u516C\u53F8 7\u65E5\u8D8B\u52BF';
-  if (deptKey) {
-    if (deptKey.indexOf('|') > 0) {
-      trend = TREND_DATA.sub_departments[deptKey] || {};
-      title = '\u{1F4C8} ' + deptKey.split('|')[1] + ' 7\u65E5\u8D8B\u52BF';
-    } else {
-      trend = TREND_DATA.departments[deptKey] || {};
-      title = '\u{1F4C8} ' + deptKey + ' 7\u65E5\u8D8B\u52BF';
-    }
+  if (!deptKey) {
+    // === 全览模式：7大区 × 1指标 ===
+    var regions = ['FL 佛州大区','TX 德州大区','GL 大湖大区','WE 美西大区','MS 中南大区','NE 东北大区','Ground项目部'];
+    var colors  = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
+    var metricKey = '排班率'; // default
+    trendMode = 1;
+
+    var html = '<div class="chart-wrap"><h3>\u{1F4C8} \u5404\u5927\u533A 7\u65E5\u8D8B\u52BF</h3>' +
+      '<div class="filter-bar" style="margin-bottom:4px">' +
+      '<span class="filter-toggle active" onclick="switchTrendMetric(this,\u0027\u6392\u73ED\u7387\u0027)"><span class="dot" style="background:#22c55e"></span>\u6392\u73ED\u7387</span>' +
+      '<span class="filter-toggle" onclick="switchTrendMetric(this,\u0027\u6B63\u786E\u7387\u0027)"><span class="dot" style="background:#3b82f6"></span>\u6B63\u786E\u7387</span>' +
+      '<span class="filter-toggle" onclick="switchTrendMetric(this,\u0027\u6253\u5361\u7387\u0027)"><span class="dot" style="background:#f97316"></span>\u6253\u5361\u7387</span>' +
+      '</div>' +
+      '<div class="filter-bar" id="trendRegionBar">' +
+      regions.map(function(r,i){ return '<span class="filter-toggle active" onclick="toggleTrendRegion(this,'+i+')"><span class="dot" style="background:'+colors[i]+'"></span>'+r.split(' ')[0]+'</span>'; }).join('') +
+      '</div>' +
+      '<div style="position:relative;height:350px"><canvas id="trendChart"></canvas></div></div>';
+
+    setTimeout(function() { drawTrendOverview(dates, metricKey, regions, colors); }, 300);
+    return html;
   }
 
-  var dates = TREND_DATA.dates;
+  if (deptKey.indexOf('|') > 0) {
+    trendMode = 0;
+    var trend = TREND_DATA.sub_departments[deptKey] || {};
+    var title = '\u{1F4C8} ' + deptKey.split('|')[1] + ' 7\u65E5\u8D8B\u52BF';
+  } else {
+    trendMode = 0;
+    var trend = TREND_DATA.departments[deptKey] || {};
+    var title = '\u{1F4C8} ' + deptKey + ' 7\u65E5\u8D8B\u52BF';
+  }
+
   var schedData = [], correctData = [], punchData = [];
   dates.forEach(function(d) {
     var t = trend[d] || {};
@@ -847,12 +869,9 @@ function renderTrendChart(deptKey) {
 
   var html = '<div class="chart-wrap"><h3>' + title + '</h3>' +
     '<div class="filter-bar">' +
-    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,0)">' +
-    '<span class="dot" style="background:#22c55e"></span>排班率</span>' +
-    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,1)">' +
-    '<span class="dot" style="background:#3b82f6"></span>正确率</span>' +
-    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,2)">' +
-    '<span class="dot" style="background:#f97316"></span>打卡率</span>' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,0)"><span class="dot" style="background:#22c55e"></span>排班率</span>' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,1)"><span class="dot" style="background:#3b82f6"></span>正确率</span>' +
+    '<span class="filter-toggle active" onclick="toggleTrendMetric(this,2)"><span class="dot" style="background:#f97316"></span>打卡率</span>' +
     '</div>' +
     '<div style="position:relative;height:300px"><canvas id="trendChart"></canvas></div></div>';
 
@@ -881,9 +900,57 @@ function renderTrendChart(deptKey) {
   return html;
 }
 
+function drawTrendOverview(dates, metricKey, regions, colors) {
+  if (trendChartInstance) trendChartInstance.destroy();
+  var ctx = document.getElementById('trendChart');
+  if (!ctx) return;
+  var datasets = [];
+  regions.forEach(function(r, i) {
+    var deptData = TREND_DATA.departments[r] || {};
+    var vals = dates.map(function(d) {
+      var t = deptData[d] || {};
+      return t[metricKey] != null ? t[metricKey] : null;
+    });
+    datasets.push({
+      label: r.split(' ')[0],
+      data: vals,
+      borderColor: colors[i],
+      backgroundColor: 'rgba(0,0,0,0)',
+      borderWidth: 2, tension: 0.3, pointRadius: 2, spanGaps: true
+    });
+  });
+  trendChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels: dates, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, color: '#94a3b8' } } },
+      scales: { y: { min: 0, max: 105, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } }, x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.10)' } } }
+    }
+  });
+}
+
+function switchTrendMetric(el, metricKey) {
+  // highlight selected metric button
+  el.parentNode.querySelectorAll('.filter-toggle').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  // redraw overview with new metric
+  var regions = ['FL 佛州大区','TX 德州大区','GL 大湖大区','WE 美西大区','MS 中南大区','NE 东北大区','Ground项目部'];
+  var colors  = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
+  var dates = TREND_DATA.dates;
+  drawTrendOverview(dates, metricKey, regions, colors);
+}
+
+function toggleTrendRegion(el, idx) {
+  el.classList.toggle('active');
+  if (!trendChartInstance || trendMode !== 1) return;
+  trendChartInstance.setDatasetVisibility(idx, el.classList.contains('active'));
+  trendChartInstance.update();
+}
+
 function toggleTrendMetric(el, idx) {
   el.classList.toggle('active');
-  if (!trendChartInstance) return;
+  if (!trendChartInstance || trendMode !== 0) return;
   trendChartInstance.setDatasetVisibility(idx, el.classList.contains('active'));
   trendChartInstance.update();
 }
