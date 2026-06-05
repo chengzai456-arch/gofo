@@ -1511,45 +1511,68 @@ function showDrilldown(title, employees) {
   } else {
     var baseKeys = ['工号', '姓名', '三级部门', '四级部门', '五级部门'];
     var sample = employees[0];
-
-    // 根据指标类型决定显示哪些列
-    var relevantKeys = [];
     var t = title || '';
-    if (t.indexOf('日超8H') !== -1) {
-      relevantKeys = ['超8H小时', '日超8H', '班次名称', '班次上班时间', '班次下班时间', '首打卡时间', '末打卡时间', '是否排班'];
-    } else if (t.indexOf('排班正确') !== -1 || t.indexOf('不正确') !== -1 || t.indexOf('排班正确率') !== -1) {
-      relevantKeys = ['班次名称', '班次上班时间', '班次下班时间', '首打卡时间', '末打卡时间', '备注\uff08GF\uff09', '是否排班正确', '是否排班'];
-    } else if (t.indexOf('未排班') !== -1 || t.indexOf('排班率') !== -1) {
-      relevantKeys = ['是否排班', '班次名称', '班次上班时间', '班次下班时间', '首打卡时间', '末打卡时间'];
-    } else if (t.indexOf('打卡') !== -1 || t.indexOf('缺卡') !== -1 || t.indexOf('打卡率') !== -1) {
-      relevantKeys = ['缺卡数', '班次内打卡次数', '标准打卡数', '首打卡时间', '末打卡时间', '班次名称', '班次上班时间'];
-    } else if (t.indexOf('补签') !== -1) {
-      relevantKeys = ['补签数', '缺卡数', '班次内打卡次数', '标准打卡数', '首打卡时间', '末打卡时间'];
-    } else if (t.indexOf('HUB') !== -1) {
-      relevantKeys = ['班次名称', '班次上班时间', '首打卡时间', '末打卡时间', '备注\uff08GF\uff09', '是否排班正确'];
-    } else if (t.indexOf('加班') !== -1 || t.indexOf('OT') !== -1) {
-      relevantKeys = ['本周加班工时', '上周加班工时', '日超8H', '班次名称', '首打卡时间', '末打卡时间'];
-    } else {
-      // 全员或未知 - 展示所有可用字段
-      var preferredAll = ['班次名称', '班次上班时间', '班次下班时间', '首打卡时间', '末打卡时间',
-        '备注\uff08GF\uff09', '超8H小时', '日超8H', '缺卡数', '班次内打卡次数', '标准打卡数',
-        '是否排班正确', '是否排班', '补签数', '本周加班工时', '上周加班工时'];
-      var allExtra = [];
-      for (var k in sample) { if (baseKeys.indexOf(k) === -1) allExtra.push(k); }
-      allExtra.sort(function(a, b) {
-        var ia = preferredAll.indexOf(a), ib = preferredAll.indexOf(b);
-        if (ia === -1 && ib === -1) return a.localeCompare(b);
-        if (ia === -1) return 1; if (ib === -1) return -1;
-        return ia - ib;
-      });
-      relevantKeys = allExtra;
+
+    // 所有可用的额外字段
+    var allExtraFields = ['班次名称','班次上班时间','班次下班时间','首打卡时间','末打卡时间',
+      '备注\uff08GF\uff09','超8H小时','日超8H','缺卡数','班次内打卡次数','标准打卡数',
+      '是否排班正确','是否排班','补签数','本周加班工时','上周加班工时'];
+
+    // 收集样本中实际存在的额外字段
+    var existingExtra = [];
+    for (var i = 0; i < allExtraFields.length; i++) {
+      if (sample[allExtraFields[i]] !== undefined) existingExtra.push(allExtraFields[i]);
     }
 
-    // 过滤出样本中实际存在的列
-    var finalExtra = [];
-    for (var i = 0; i < relevantKeys.length; i++) {
-      if (sample[relevantKeys[i]] !== undefined) finalExtra.push(relevantKeys[i]);
+    // 根据指标类型精确过滤
+    var includeKeys = [];
+    var excludeSet = {};
+
+    if (t.indexOf('日超8H') !== -1) {
+      // 日超8H合计: 人员信息+部门信息+超8H小时
+      includeKeys = ['超8H小时'];
+    } else if (t.indexOf('HUB') !== -1) {
+      // HUB排班正确率: 排除 日超8H,缺卡数,班次内打卡次数,标准打卡数,是否排班,补签数
+      excludeSet = {'日超8H':1,'超8H小时':1,'缺卡数':1,'班次内打卡次数':1,'标准打卡数':1,'是否排班':1,'补签数':1,'本周加班工时':1,'上周加班工时':1};
+    } else if (t.indexOf('排班正确') !== -1 || (t.indexOf('不正确') !== -1 && t.indexOf('HUB') === -1)) {
+      // 排班正确率: 排除 日超8H,缺卡数,班次内打卡次数,标准打卡数,是否排班,补签数
+      excludeSet = {'日超8H':1,'超8H小时':1,'缺卡数':1,'班次内打卡次数':1,'标准打卡数':1,'是否排班':1,'补签数':1,'本周加班工时':1,'上周加班工时':1};
+    } else if (t.indexOf('打卡') !== -1 || t.indexOf('缺卡') !== -1) {
+      // 打卡数/打卡率: 排除 日超8H,是否排班正确,是否排班
+      excludeSet = {'日超8H':1,'超8H小时':1,'是否排班正确':1,'是否排班':1,'补签数':1,'备注\uff08GF\uff09':1,'本周加班工时':1,'上周加班工时':1};
+    } else if (t.indexOf('加班') !== -1 || t.indexOf('OT') !== -1) {
+      // 本周/上周加班工时: 人员信息+部门信息+本周加班工时+上周加班工时
+      includeKeys = ['本周加班工时', '上周加班工时'];
+    } else if (t.indexOf('补签') !== -1) {
+      // 补签率: 排除 日超8H,是否排班正确,是否排班
+      excludeSet = {'日超8H':1,'超8H小时':1,'是否排班正确':1,'是否排班':1,'本周加班工时':1,'上周加班工时':1};
+    } else if (t.indexOf('排班率') !== -1 || t.indexOf('未排班') !== -1) {
+      // 排班率: 人员信息+部门信息+班次名称+是否排班
+      includeKeys = ['班次名称', '是否排班'];
+    } else if (t.indexOf('全员') !== -1) {
+      // 全员: 展示全部字段
+      includeKeys = existingExtra.slice();
+    } else {
+      // 未知: 展示全部字段
+      includeKeys = existingExtra.slice();
     }
+
+    // 构建最终列
+    var finalExtra;
+    if (includeKeys.length > 0) {
+      // 白名单模式: 只取includeKeys中实际存在的
+      finalExtra = [];
+      for (var j = 0; j < includeKeys.length; j++) {
+        if (sample[includeKeys[j]] !== undefined) finalExtra.push(includeKeys[j]);
+      }
+    } else {
+      // 黑名单模式: 从existingExtra中排除excludeSet
+      finalExtra = [];
+      for (var k = 0; k < existingExtra.length; k++) {
+        if (!excludeSet[existingExtra[k]]) finalExtra.push(existingExtra[k]);
+      }
+    }
+
     var allKeys = baseKeys.concat(finalExtra);
 
     var html = '<div class="summary-line">共 <strong>' + employees.length + '</strong> 人</div>';
