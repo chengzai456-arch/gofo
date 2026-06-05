@@ -677,7 +677,7 @@ function infoBtn(label, employees) {
 function metricCard(title, valStr, desc, statusCls, cardCls, employees) {
   var cardC = cardCls ? ' ' + cardCls : '';
   var valC = statusCls ? ' ' + statusCls : '';
-  var drillVal = employees ? drillData(valStr, '', employees) : valStr;
+  var drillVal = employees ? drillData(valStr, title, employees) : valStr;
   var drillIcon = employees ? ' <span style="font-size:10px;color:#9ca3af;font-weight:400">(可查看明细)</span>' : '';
   return '<div class="card' + cardC + '">' +
     '<div class="card-title">' + title + drillIcon + '</div>' +
