@@ -1138,9 +1138,9 @@ function renderOverview() {
   var hubData = topDepts.map(function(d) { return parseFloat(d.summary['HUB']['正确率']); });
   var punchData = topDepts.map(function(d) { return parseFloat(d.summary['打卡率']['打卡率']); });
 
-  var chartHtml = renderChartFilter('overview') +
+  var chartHtml = (DATA.departments.length > 1) ? (renderChartFilter('overview') +
     '<div class="chart-wrap"><h3>&#x1F4C8; 部门指标趋势（前12部门）</h3>' +
-    '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>';
+    '<div style="position:relative; height:380px;"><canvas id="overviewLineChart"></canvas></div></div>') : '';
 
   // 顺序: cards → table → charts → trend
   main.innerHTML = cards + table + chartHtml + renderTrendChart(null);
