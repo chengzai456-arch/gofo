@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>考勤排班数据分析 Web</title>
+<style>
+/* ============================================================
+   考勤 Web — 白色仪表盘风格（与 gofo 报告页一致）
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+}
+
+/* ---- 顶部 ---- */
+.header {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%);
+    color: #fff;
+    padding: 28px 40px 24px;
+    box-shadow: 0 2px 12px rgba(79,70,229,0.25);
+}
+.header h1 { font-size: 22px; font-weight: 600; letter-spacing: 0.5px; }
+.header p  { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+
+/* ---- 主容器 ---- */
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 60px;
+}
+
+/* ---- 卡片 ---- */
+.card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+}
+.card h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f5;
+}
+
+/* ---- 文件上传网格 ---- */
+.file-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+@media (max-width: 640px) {
+    .file-grid { grid-template-columns: 1fr; }
+}
+
+.file-item {
+    position: relative;
+}
+.file-item label {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+.file-item input[type=file] {
+    display: none;
+}
+.file-drop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1.5px dashed #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 13px;
+    color: #9ca3af;
+    min-height: 42px;
+}
+.file-drop:hover, .file-drop.dragover {
+    border-color: #6366f1;
+    background: #eef2ff;
+    color: #4f46e5;
+}
+.file-drop.has-file {
+    border-color: #22c55e;
+    border-style: solid;
+    color: #16a34a;
+    background: #f0fdf4;
+}
+.file-drop .fname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+/* ---- 配置行 ---- */
+.config-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.config-row label {
+    font-size: 13px;
+    color: #374151;
+}
+.config-row input[type=number] {
+    width: 60px;
+    padding: 6px 8px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* ---- 按钮 ---- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 28px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.25);
+}
+.btn-primary:hover { background: linear-gradient(135deg, #4338ca, #4f46e5); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-download {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1.5px solid #bfdbfe;
+    margin: 4px 8px 4px 0;
+}
+.btn-download:hover { background: #dbeafe; }
+
+/* ---- 进度 ---- */
+#progress-section { display: none; }
+.log-box {
+    background: #1e1e2e;
+    color: #d4d4d8;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 16px;
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 12px;
+    white-space: pre-wrap;
+}
+.log-box .done  { color: #22c55e; }
+.log-box .error { color: #ef4444; }
+
+.spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2.5px solid #e5e7eb;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- 结果 ---- */
+#result-section { display: none; }
+.result-links { margin-top: 12px; }
+.error-box {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 12px;
+    border: 1px solid #fecaca;
+    white-space: pre-wrap;
+}
+
+/* ---- 提示 ---- */
+.hint {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 6px;
+    line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>考勤排班数据分析 Web</h1>
+    <p>上传 9 个 Excel 原始文件，一键执行完整处理流程（清洗 → 指标计算 → 透视分析）</p>
+</div>
+
+<div class="container">
+
+    <!-- 文件上传 -->
+    <div class="card">
+        <h2>上传原始文件</h2>
+        <div class="hint">支持 .xlsx 格式，单个文件不超过 50MB。点击框内区域选择文件，或拖拽文件到框内。</div>
+        <form id="upload-form" style="margin-top:14px;">
+            <div class="file-grid">
+
+                <div class="file-item">
+                    <label>原始考勤数据 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="raw_file" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>离职流程 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="leave_file" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>花名册 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="roster_file" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>班次 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="shift_file" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>补签管理 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="resign_file" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>GUS 白名单 *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="gus_whitelist" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>美区签字报表（本周） *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="sign_this" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>美区签字报表（上周） *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="sign_last" accept=".xlsx" required>
+                </div>
+
+                <div class="file-item">
+                    <label>美区签字报表（双周） *</label>
+                    <div class="file-drop" onclick="this.nextElementSibling.click()" ondrop="handleDrop(event,this)" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                        <span>📄</span><span class="fname">点击或拖拽选择</span>
+                    </div>
+                    <input type="file" name="sign_biweek" accept=".xlsx" required>
+                </div>
+
+            </div><!-- /file-grid -->
+
+            <div class="config-row" style="margin-top:20px;">
+                <label>花名册文件名序号：</label>
+                <input type="number" name="roster_index" value="12" min="1" max="99">
+                <span class="hint" style="margin:0;">对应「花名册 (N).xlsx」中的 N</span>
+            </div>
+
+            <button type="submit" id="submit-btn" class="btn btn-primary" style="margin-top:16px;width:100%;">
+                开始处理
+            </button>
+        </form>
+    </div>
+
+    <!-- 进度 -->
+    <div class="card" id="progress-section">
+        <h2>处理进度</h2>
+        <div class="log-box" id="log-box"></div>
+        <div id="spinner-wrap" style="margin-top:12px;font-size:13px;color:#6366f1;">
+            <span class="spinner"></span>正在处理，请稍候…
+        </div>
+    </div>
+
+    <!-- 结果 -->
+    <div class="card" id="result-section">
+        <h2>处理结果</h2>
+        <div class="result-links" id="download-links"></div>
+        <div class="error-box" id="error-box" style="display:none;"></div>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+/* ============================================================
+   前端逻辑 —— 同步方案（直接 await 后端处理完成）
+   ============================================================ */
+const API = '';  // 同源部署，无需写死地址
+
+// ---- 文件拖拽/选择 ----
+document.querySelectorAll('.file-drop').forEach(drop => {
+    const input = drop.parentElement.querySelector('input[type=file]');
+    input.addEventListener('change', () => {
+        if (input.files.length) {
+            drop.classList.add('has-file');
+            drop.querySelector('.fname').textContent = input.files[0].name;
+        }
+    });
+});
+
+function handleDrop(e, drop) {
+    e.preventDefault();
+    drop.classList.remove('dragover');
+    const input = drop.parentElement.querySelector('input[type=file]');
+    if (e.dataTransfer.files.length) {
+        // 用 DataTransfer 兼容方式赋值
+        const dt = new DataTransfer();
+        dt.items.add(e.dataTransfer.files[0]);
+        input.files = dt.files;
+        drop.classList.add('has-file');
+        drop.querySelector('.fname').textContent = input.files[0].name;
+    }
+}
+
+// ---- 提交表单（同步等待后端处理完成）----
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const form   = e.target;
+    const btn    = document.getElementById('submit-btn');
+    const fd     = new FormData(form);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="border-color:#fff;border-top-color:#6366f1;width:14px;height:14px;margin:0 6px 0 0;"></span>正在处理，请稍候…';
+
+    // 隐藏旧结果，显示进度区
+    document.getElementById('result-section').style.display = 'none';
+    document.getElementById('progress-section').style.display = 'block';
+    document.getElementById('log-box').textContent = '服务端正在执行：清洗 → 指标计算 → 透视分析…\n预计需要 1~3 分钟，请耐心等待。';
+    document.getElementById('spinner-wrap').style.display   = 'block';
+
+    try {
+        const resp = await fetch(`${API}/api/process`, { method: 'POST', body: fd });
+        const data = await resp.json();
+
+        // 隐藏 spinner
+        document.getElementById('spinner-wrap').style.display = 'none';
+
+        if (!resp.ok) {
+            // HTTP 错误（413/400 等）
+            throw new Error(data.detail || `服务器错误（${resp.status}）`);
+        }
+
+        showResult(data);
+
+    } catch (err) {
+        document.getElementById('spinner-wrap').style.display = 'none';
+        document.getElementById('log-box').textContent += `\n\n请求失败：${err.message}`;
+        // 显示错误结果区
+        const result = document.getElementById('result-section');
+        result.style.display = 'block';
+        document.getElementById('download-links').innerHTML = '';
+        const errBox = document.getElementById('error-box');
+        errBox.style.display = 'block';
+        errBox.textContent  = err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '开始处理';
+    }
+});
+
+// ---- 展示结果 ----
+function showResult(data) {
+    const result  = document.getElementById('result-section');
+    const links   = document.getElementById('download-links');
+    const errBox  = document.getElementById('error-box');
+    const logBox  = document.getElementById('log-box');
+
+    result.style.display = 'block';
+    errBox.style.display  = 'none';
+    links.innerHTML        = '';
+
+    if (data.status === 'done') {
+        logBox.innerHTML += '\n✓ 全部处理完成！';
+        const title = document.createElement('p');
+        title.style.cssText = 'color:#22c55e;font-weight:500;margin-bottom:12px;font-size:14px;';
+        title.textContent = '✓ 处理完成，点击下载：';
+        links.appendChild(title);
+
+        for (const [name, url] of Object.entries(data.products)) {
+            const a = document.createElement('a');
+            a.href     = url;
+            a.download = name;
+            a.className = 'btn btn-download';
+            a.style.cssText = 'display:inline-block;text-decoration:none;';
+            a.textContent = `⬇ ${name}`;
+            links.appendChild(a);
+        }
+    } else if (data.status === 'error') {
+        logBox.innerHTML += `\n✗ 处理出错`;
+        errBox.style.display = 'block';
+        errBox.textContent  = data.error || '未知错误';
+        // 如果有部分产物也显示
+        if (data.products && Object.keys(data.products).length > 0) {
+            const tip = document.createElement('p');
+            tip.style.cssText = 'color:#f59e0b;font-weight:500;margin:10px 0 6px;';
+            tip.textContent = '⚠ 部分文件已生成，可先下载查看：';
+            links.appendChild(tip);
+            for (const [name, url] of Object.entries(data.products)) {
+                const a = document.createElement('a');
+                a.href     = url;
+                a.download = name;
+                a.className = 'btn btn-download';
+                a.style.cssText = 'display:inline-block;text-decoration:none;';
+                a.textContent = `⬇ ${name}`;
+                links.appendChild(a);
+            }
+        }
+    }
+}
+</script>
+</body>
+</html>
