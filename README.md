@@ -1,17 +1,6 @@
-# 考勤排班数据分析 Web 版
+# 考勤排班数据分析工具
 
-基于现有 `attendance-pipeline` skill 的 Python 数据处理逻辑，封装为 Web 服务。用户通过浏览器上传 9 个 Excel 原始文件，后端异步执行完整处理流程（清洗 → 指标计算 → 透视分析），处理完成后提供结果文件下载。
-
----
-
-## 功能特性
-
-- **一键上传**：单页表单上传全部 9 个原始 Excel 文件，支持拖拽
-- **异步处理**：提交后立即返回任务 ID，后端后台顺序执行，前端轮询进度
-- **实时进度**：处理日志实时展示（清洗中 / 指标计算中 / 透视分析中）
-- **产物下载**：处理完成后展示 3 个结果文件下载链接
-- **并发隔离**：每个请求独立 UUID 临时目录，互不干扰
-- **安全防护**：文件大小限制（50MB）、路径遍历防护、文件类型限制（.xlsx）
+基于现有 `attendance-pipeline` skill 的 Python 数据处理逻辑，提供 **CLI 离线脚本** 和 **Web 服务** 两种使用方式。
 
 ---
 
@@ -19,165 +8,140 @@
 
 ```
 attendance-web/
-├── main.py              # FastAPI 后端（接口 + pipeline 封装）
-├── requirements.txt     # Python 依赖
+├── cli.py               # 离线 CLI 脚本（推荐日常使用）
+├── main.py              # FastAPI Web 后端
+├── config.py            # 路径配置
+├── pipeline/            # 数据处理核心模块（自包含）
+│   ├── steps/
+│   │   ├── clean_data.py       # 步骤1：数据清洗
+│   │   ├── add_metrics.py      # 步骤2：指标计算
+│   │   ├── pivot_analysis.py   # 步骤3：透视分析
+│   │   └── ...
+│   └── utils.py
 ├── static/
-│   └── index.html     # 前端页面（单页，含 CSS + JS）
-├── temp/                 # 运行时临时目录（自动创建，按需清理）
-├── run.py               # 启动脚本
-├── Dockerfile           # 容器化部署
-└── README.md            # 本文件
+│   └── index.html       # Web 前端页面
+├── requirements.txt
+├── run.py               # Web 服务启动脚本
+├── Dockerfile
+└── README.md
 ```
 
 ---
 
-## 快速启动
+## 方式一：离线 CLI（推荐）
 
-### 环境要求
+适合日常使用，无需启动 Web 服务，直接命令行运行即可输出 Excel 结果。
 
-- Python 3.10+
-- 依赖：见 `requirements.txt`
-- 现有 `attendance-pipeline` skill（pipeline 模块从这个 skill 目录导入）
+### 最简用法
 
-### 安装依赖
+把所有 `.xlsx` 源文件放在当前目录下，直接运行：
 
 ```bash
-# 使用 managed Python
-PYTHON="C:\Users\Administrator\.workbuddy\binaries\python\versions\3.13.12\python.exe"
-PIP="$PYTHON -m pip"
-
-$PIP install -r requirements.txt
+python cli.py
 ```
 
-### 启动服务
+输出文件在 `./output/` 目录：
+- `清洗后数据.xlsx`
+- `指标计算后数据.xlsx` ← 核心产物
+- `透视分析.xlsx`
+
+### 指定输入/输出目录
+
+```bash
+# 源文件放在 input/ 目录
+python cli.py --input ./input --output ./result
+```
+
+### 命令行指定每个文件
+
+```bash
+python cli.py \
+  --raw "原始数据.xlsx" \
+  --leave "离职流程.xlsx" \
+  --roster "花名册 (12).xlsx" \
+  --shift "班次.xlsx" \
+  --resign "补签管理.xlsx" \
+  --gus "GUS白名单.xlsx" \
+  --sign-this "美区签字报表.xlsx" \
+  --sign-last "美区签字报表 (1).xlsx" \
+  --sign-biweek "美区签字报表 (2).xlsx" \
+  --output ./result
+```
+
+### 完整参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--input`, `-i` | `.` (当前目录) | 输入文件目录 |
+| `--output`, `-o` | `./output` | 输出目录 |
+| `--roster-index` | `12` | 花名册 Sheet 序号 |
+| `--raw` | — | 原始考勤数据路径 |
+| `--leave` | — | 离职流程路径 |
+| `--roster` | — | 花名册路径（支持 `{n}` 占位符） |
+| `--shift` | — | 班次路径 |
+| `--resign` | — | 补签管理路径 |
+| `--gus` | — | GUS白名单路径 |
+| `--sign-this` | — | 美区签字报表(本周)路径 |
+| `--sign-last` | — | 美区签字报表(上周)路径 |
+| `--sign-biweek` | — | 美区签字报表(双周)路径 |
+| `--skip-check` | `false` | 跳过文件存在检查 |
+
+---
+
+## 方式二：Web 服务
+
+适合团队多人在线使用，通过浏览器上传文件。
+
+### 启动
 
 ```bash
 python run.py
-# 或直接使用 uvicorn
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# 访问 http://localhost:8000
 ```
 
-启动后访问 `http://localhost:8000`。
-
----
-
-## API 说明
+### API
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET  | `/` | 前端页面 |
-| POST | `/api/tasks` | 创建处理任务（上传 9 个文件） |
-| GET  | `/api/tasks/{task_id}` | 查询任务状态 + 进度日志 |
-| GET  | `/api/download/{task_id}/{filename}` | 下载结果文件 |
-| POST | `/api/cleanup/{task_id}` | 手动清理任务临时目录 |
+| POST | `/api/process` | 上传 9 个文件，同步处理 |
+| GET  | `/api/download/{id}/{name}` | 下载结果文件 |
 | GET  | `/health` | 健康检查 |
 
-### 创建任务 POST `/api/tasks`
+---
 
-**请求**：`multipart/form-data`
+## 安装依赖
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|:----:|------|
-| `roster_index` | int |  | 花名册文件名序号，默认 12 |
-| `raw_file` | file | ✅ | 原始考勤数据.xlsx |
-| `leave_file` | file | ✅ | 离职流程.xlsx |
-| `roster_file` | file | ✅ | 花名册.xlsx |
-| `shift_file` | file | ✅ | 班次.xlsx |
-| `resign_file` | file | ✅ | 补签管理.xlsx |
-| `gus_whitelist` | file | ✅ | GUS白名单.xlsx |
-| `sign_this` | file | ✅ | 美区签字报表.xlsx（本周） |
-| `sign_last` | file | ✅ | 美区签字报表(1).xlsx（上周） |
-| `sign_biweek` | file | ✅ | 美区签字报表(2).xlsx（双周） |
-
-**响应**：
-
-```json
-{
-  "task_id": "a3f8c1d2",
-  "status": "processing",
-  "message": "任务已创建，正在处理中"
-}
+```bash
+pip install -r requirements.txt
 ```
-
-### 查询状态 GET `/api/tasks/{task_id}`
-
-**响应**：
-
-```json
-{
-  "task_id": "a3f8c1d2",
-  "status": "done",
-  "log": ["[1/3] 数据清洗中...", "  ✓ 清洗完成 → 清洗后数据.xlsx", "..."],
-  "products": {
-    "清洗后数据.xlsx": "/api/download/a3f8c1d2/清洗后数据.xlsx",
-    "指标计算后数据.xlsx": "/api/download/a3f8c1d2/指标计算后数据.xlsx",
-    "透视分析.xlsx": "/api/download/a3f8c1d2/透视分析.xlsx"
-  },
-  "error": ""
-}
-```
-
-`status` 枚举：`processing` / `done` / `error`
 
 ---
 
 ## 部署
 
-### 开发环境
-
-```bash
-python run.py
-```
-
-### 生产环境（uvicorn + nginx）
-
-```bash
-# 安装 gunicorn（Windows 下用 uvicorn workers）
-pip install gunicorn
-
-# 启动（4 workers）
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
-```
-
-nginx 反向代理配置示例：
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    client_max_body_size 500M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-### Docker 部署
+### Docker
 
 ```bash
 docker build -t attendance-web .
-docker run -p 8000:8000 -v ./temp:/app/temp attendance-web
+docker run -p 8000:8000 attendance-web
 ```
+
+---
+
+## 数据处理流程
+
+```
+源文件(9个) → [步骤1] 清洗 → [步骤2] 指标计算 → [步骤3] 透视分析 → 输出 Excel
+```
+
+详见 `考勤数据处理逻辑说明.md`。
 
 ---
 
 ## 注意事项
 
-1. **skill 路径**：`main.py` 中 `SKILL_DIR` 指向 `attendance-pipeline` skill 目录，部署时如需修改请更新该变量
-2. **临时目录清理**：任务完成后建议调用 `/api/cleanup/{task_id}` 清理；也可配置定时任务清理超过 24h 的临时目录
-3. **并发限制**：当前任务状态存储在内存（`tasks` 字典），重启后丢失；生产环境建议换 Redis
-4. **文件大小**：单个上传文件限制 50MB，可在 `main.py` 中修改 `MAX_FILE_BYTES`
-5. **进程模型**：pipeline 为 CPU 密集型（pandas），建议生产环境使用多 worker，每个 worker 独立处理请求
-
----
-
-## 扩展方向
-
-- **步骤4-5（HTML 报告 + 同比注入）**：在 `_run_pipeline()` 中补充 `run_report_data` / `run_render` / `run_comparison` / `run_inject` 调用
-- **步骤6（SSO 权限守卫）**：对下载接口增加 JWT 鉴权
-- **Celery 异步任务**：大数据量时换用 Celery + Redis，支持任务队列和进度推送
-- **邮件通知**：处理完成后自动发送邮件通知（含下载链接）
+- 项目已自包含，不再依赖外部 skill 目录
+- 处理数千行数据通常 1~3 分钟
+- GUS白名单可选，不存在时自动跳过
+- 花名册模板使用 `{n}` 替换序号

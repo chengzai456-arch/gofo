@@ -7,22 +7,16 @@ from pathlib import Path
 from typing import List
 
 # =========================================================
-# 路径初始化：本文件所在目录必须排最前
-# 防止找到 skill 目录下的同名 main.py
+# 路径初始化：项目自包含，pipeline/config 都在本目录下
 # =========================================================
-BASE_DIR  = Path(__file__).parent
+BASE_DIR = Path(__file__).parent
 sys.path.insert(0, str(BASE_DIR))
 
-# skill 目录（pipeline 模块从这里导入）
-SKILL_DIR = Path(r"C:\Users\Administrator\.workbuddy\skills\attendance-pipeline")
-sys.path.insert(1, str(SKILL_DIR))
-sys.path.insert(2, str(SKILL_DIR / "pipeline"))
+# 本地 venv site-packages（仅本地开发时需要，云端通过 pip install 解决）
+_LOCAL_VENV = BASE_DIR / ".venv" / "Lib" / "site-packages"
+if _LOCAL_VENV.exists():
+    sys.path.insert(0, str(_LOCAL_VENV))
 
-# venv site-packages (pandas, openpyxl 等依赖)
-VENV_SITE = r"C:\Users\Administrator\.workbuddy\binaries\python\envs\default\Lib\site-packages"
-sys.path.insert(3, VENV_SITE)
-
-# 强制 UTF-8
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 import config as pipeline_config
