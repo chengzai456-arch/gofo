@@ -7,6 +7,14 @@
 
 ---
 
+## 下载 .exe（无需安装 Python）
+
+> 下载 `gofo-attendance.exe`，放到 Excel 文件所在目录，双击运行即可。
+
+📥 **[最新 Release](https://github.com/chengzai456-arch/gofo/releases)** — 找到 `gofo-attendance.exe` 下载
+
+---
+
 ## 安装
 
 ### 方式一：pip 安装（推荐）
