@@ -16,7 +16,7 @@ import os
 import pandas as pd
 import numpy as np
 
-from pipeline.utils import parse_date
+from ..utils import parse_date
 
 # GL00 白名单
 GL00_WHITELIST = {'GL000434', 'GL001344', 'GL000004', 'GL000440', 'GL000446', 'GL000902'}

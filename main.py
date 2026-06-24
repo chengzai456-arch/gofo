@@ -19,10 +19,9 @@ if _LOCAL_VENV.exists():
 
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
-import config as pipeline_config
-from pipeline.steps.clean_data    import run as run_clean
-from pipeline.steps.add_metrics    import run as run_metrics
-from pipeline.steps.pivot_analysis import run as run_pivot
+from gofo_attendance.pipeline.steps.clean_data    import run as run_clean
+from gofo_attendance.pipeline.steps.add_metrics    import run as run_metrics
+from gofo_attendance.pipeline.steps.pivot_analysis import run as run_pivot
 
 from fastapi                import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses      import FileResponse

@@ -1,147 +1,137 @@
-# 考勤排班数据分析工具
+# gofo-attendance — 考勤数据处理工具
 
-基于现有 `attendance-pipeline` skill 的 Python 数据处理逻辑，提供 **CLI 离线脚本** 和 **Web 服务** 两种使用方式。
+> 一键处理考勤 Excel 数据：清洗 → 指标计算 → 透视分析
 
----
-
-## 项目结构
-
-```
-attendance-web/
-├── cli.py               # 离线 CLI 脚本（推荐日常使用）
-├── main.py              # FastAPI Web 后端
-├── config.py            # 路径配置
-├── pipeline/            # 数据处理核心模块（自包含）
-│   ├── steps/
-│   │   ├── clean_data.py       # 步骤1：数据清洗
-│   │   ├── add_metrics.py      # 步骤2：指标计算
-│   │   ├── pivot_analysis.py   # 步骤3：透视分析
-│   │   └── ...
-│   └── utils.py
-├── static/
-│   └── index.html       # Web 前端页面
-├── requirements.txt
-├── run.py               # Web 服务启动脚本
-├── Dockerfile
-└── README.md
-```
+[![GitHub](https://img.shields.io/badge/GitHub-chengzai456--arch%2Fgofo-blue)](https://github.com/chengzai456-arch/gofo)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB)](https://www.python.org/)
 
 ---
 
-## 方式一：离线 CLI（推荐）
+## 安装
 
-适合日常使用，无需启动 Web 服务，直接命令行运行即可输出 Excel 结果。
-
-### 最简用法
-
-把所有 `.xlsx` 源文件放在当前目录下，直接运行：
+### 方式一：pip 安装（推荐）
 
 ```bash
+pip install git+https://github.com/chengzai456-arch/gofo.git
+```
+
+安装后在终端直接输入 `gofo` 即可使用。
+
+### 方式二：克隆本地安装
+
+```bash
+git clone https://github.com/chengzai456-arch/gofo.git
+cd gofo
+pip install -e .
+gofo
+```
+
+### 方式三：下载 .exe（无需 Python）
+
+从 [GitHub Releases](https://github.com/chengzai456-arch/gofo/releases) 下载 `gofo-attendance.exe`，放到 Excel 文件所在目录，双击即可运行。
+
+### 方式四：直接运行（不安装）
+
+```bash
+git clone https://github.com/chengzai456-arch/gofo.git
+cd gofo
+pip install pandas numpy openpyxl
 python cli.py
 ```
 
-输出文件在 `./output/` 目录：
-- `清洗后数据.xlsx`
-- `指标计算后数据.xlsx` ← 核心产物
-- `透视分析.xlsx`
+---
 
-### 指定输入/输出目录
+## 使用方法
+
+### 最简模式
+
+把所有 Excel 文件放到当前目录，直接运行：
 
 ```bash
-# 源文件放在 input/ 目录
-python cli.py --input ./input --output ./result
+gofo
 ```
 
-### 命令行指定每个文件
+### 指定目录
 
 ```bash
-python cli.py \
-  --raw "原始数据.xlsx" \
-  --leave "离职流程.xlsx" \
-  --roster "花名册 (12).xlsx" \
-  --shift "班次.xlsx" \
-  --resign "补签管理.xlsx" \
-  --gus "GUS白名单.xlsx" \
-  --sign-this "美区签字报表.xlsx" \
-  --sign-last "美区签字报表 (1).xlsx" \
-  --sign-biweek "美区签字报表 (2).xlsx" \
-  --output ./result
+gofo --input ./6月考勤数据 --output ./结果
 ```
 
 ### 完整参数
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--input`, `-i` | `.` (当前目录) | 输入文件目录 |
-| `--output`, `-o` | `./output` | 输出目录 |
-| `--roster-index` | `12` | 花名册 Sheet 序号 |
-| `--raw` | — | 原始考勤数据路径 |
-| `--leave` | — | 离职流程路径 |
-| `--roster` | — | 花名册路径（支持 `{n}` 占位符） |
-| `--shift` | — | 班次路径 |
-| `--resign` | — | 补签管理路径 |
-| `--gus` | — | GUS白名单路径 |
-| `--sign-this` | — | 美区签字报表(本周)路径 |
-| `--sign-last` | — | 美区签字报表(上周)路径 |
-| `--sign-biweek` | — | 美区签字报表(双周)路径 |
-| `--skip-check` | `false` | 跳过文件存在检查 |
+```bash
+gofo \
+  --raw "原始考勤数据.xlsx" \
+  --leave "离职流程.xlsx" \
+  --roster "花名册 ({n}).xlsx" \
+  --shift "班次.xlsx" \
+  --resign "补签管理.xlsx" \
+  --sign-this "美区签字报表.xlsx" \
+  --sign-last "美区签字报表 (1).xlsx" \
+  --sign-biweek "美区签字报表 (2).xlsx" \
+  --roster-index 12 \
+  --output ./result
+```
+
+### 参数说明
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `-i, --input` | 输入文件目录 | `.` (当前目录) |
+| `-o, --output` | 输出目录 | `./output` |
+| `--roster-index` | 花名册 Sheet 序号 | `12` |
+| `--raw` | 原始考勤数据 | `原始数据.xlsx` |
+| `--leave` | 离职流程 | `离职流程.xlsx` |
+| `--roster` | 花名册模板 | `花名册 ({n}).xlsx` |
+| `--shift` | 班次 | `班次.xlsx` |
+| `--resign` | 补签管理 | `补签管理.xlsx` |
+| `--gus` | GUS白名单 | `GUS白名单.xlsx` |
+| `--sign-this` | 美区签字(本周) | `美区签字报表.xlsx` |
+| `--sign-last` | 美区签字(上周) | `美区签字报表 (1).xlsx` |
+| `--sign-biweek` | 美区签字(双周) | `美区签字报表 (2).xlsx` |
+| `--skip-check` | 跳过文件检查 | (调试用) |
 
 ---
 
-## 方式二：Web 服务
+## 输出产物
 
-适合团队多人在线使用，通过浏览器上传文件。
+| 文件 | 说明 |
+|------|------|
+| `清洗后数据.xlsx` | 步骤1：清洗后数据 |
+| `指标计算后数据.xlsx` | **核心产物**：含 HUB标记、排班正确性、缺卡、超8H 等指标 |
+| `透视分析.xlsx` | 步骤3：多维度透视分析 |
 
-### 启动
+---
+
+## Web 版（可选）
+
+项目还包含一个 Web 版本，在浏览器中操作：
 
 ```bash
+pip install -e ".[web]"
 python run.py
 # 访问 http://localhost:8000
 ```
 
-### API
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET  | `/` | 前端页面 |
-| POST | `/api/process` | 上传 9 个文件，同步处理 |
-| GET  | `/api/download/{id}/{name}` | 下载结果文件 |
-| GET  | `/health` | 健康检查 |
-
 ---
 
-## 安装依赖
+## 构建 .exe
 
 ```bash
-pip install -r requirements.txt
+pip install pyinstaller
+python build_exe.py
+# 输出: dist/gofo-attendance.exe
 ```
 
----
-
-## 部署
-
-### Docker
+推送 `v*` 标签后，GitHub Actions 会自动构建并发布 .exe：
 
 ```bash
-docker build -t attendance-web .
-docker run -p 8000:8000 attendance-web
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ---
 
-## 数据处理流程
+## 许可
 
-```
-源文件(9个) → [步骤1] 清洗 → [步骤2] 指标计算 → [步骤3] 透视分析 → 输出 Excel
-```
-
-详见 `考勤数据处理逻辑说明.md`。
-
----
-
-## 注意事项
-
-- 项目已自包含，不再依赖外部 skill 目录
-- 处理数千行数据通常 1~3 分钟
-- GUS白名单可选，不存在时自动跳过
-- 花名册模板使用 `{n}` 替换序号
+MIT License

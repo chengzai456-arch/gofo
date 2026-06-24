@@ -23,6 +23,12 @@ temp/
 *.log
 *.xlsx
 
+# PyInstaller
+*.spec
+dist/
+build/
+*.egg-info/
+
 # OS
 .DS_Store
 Thumbs.db

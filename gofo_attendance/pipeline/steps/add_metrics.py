@@ -18,7 +18,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 
-from pipeline.utils import (
+from ..utils import (
     to_str, to_num, parse_hm, abs_diff_minutes,
     total_hours, parse_work_period,
 )

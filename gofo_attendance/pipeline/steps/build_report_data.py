@@ -8,7 +8,7 @@ import json
 import pandas as pd
 import numpy as np
 
-from pipeline.utils import to_str as ts, to_num as tn, safe_div, pct_str
+from ..utils import to_str as ts, to_num as tn, safe_div, pct_str
 
 
 def _build_employee_row(r):

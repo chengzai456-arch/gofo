@@ -10,7 +10,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-from pipeline.utils import to_str, to_num
+from ..utils import to_str, to_num
 
 
 # ============================================================
