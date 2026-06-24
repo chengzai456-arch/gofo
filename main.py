@@ -132,21 +132,21 @@ async def process_files(
     roster_path = work_dir / f"花名册 ({roster_index}).xlsx"
     (work_dir / FILE_SAVE_NAMES["roster_file"]).rename(roster_path)
 
-    # ---- 构造 config 字典（与 skill main.py 一致）----
+    # ---- 构造 config 字典（key 名与 pipeline 步骤一致）----
     config = {
-        "raw_file":           str(work_dir / "原始考勤数据.xlsx"),
-        "leave_file":         str(work_dir / "离职流程.xlsx"),
-        "roster_pattern":     str(roster_path),
-        "shift_file":         str(work_dir / "班次.xlsx"),
-        "resign_file":        str(work_dir / "补签管理.xlsx"),
-        "gus_whitelist":      str(work_dir / "GUS白名单.xlsx"),
-        "sign_report_this":   str(work_dir / "美区签字报表.xlsx"),
-        "sign_report_last":   str(work_dir / "美区签字报表 (1).xlsx"),
-        "sign_report_biweek": str(work_dir / "美区签字报表 (2).xlsx"),
-        "output_clean":       str(work_dir / "清洗后数据.xlsx"),
-        "output_metrics":     str(work_dir / "指标计算后数据.xlsx"),
-        "output_pivot":       str(work_dir / "透视分析.xlsx"),
-        "roster_index":       roster_index,
+        "raw_file":               str(work_dir / "原始考勤数据.xlsx"),
+        "leave_file":             str(work_dir / "离职流程.xlsx"),
+        "roster_pattern":         str(roster_path),
+        "shift_file":             str(work_dir / "班次.xlsx"),
+        "resign_file":            str(work_dir / "补签管理.xlsx"),
+        "gus_whitelist_file":     str(work_dir / "GUS白名单.xlsx"),
+        "sign_report_this_week":  str(work_dir / "美区签字报表.xlsx"),
+        "sign_report_last_week":  str(work_dir / "美区签字报表 (1).xlsx"),
+        "sign_report_biweek":     str(work_dir / "美区签字报表 (2).xlsx"),
+        "cleaned_file":           str(work_dir / "清洗后数据.xlsx"),
+        "metrics_file":           str(work_dir / "指标计算后数据.xlsx"),
+        "pivot_file":             str(work_dir / "透视分析.xlsx"),
+        "workspace":              str(work_dir),
     }
 
     # ---- 按顺序执行 3 大步骤 ----
